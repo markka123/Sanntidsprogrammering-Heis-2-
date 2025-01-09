@@ -1,0 +1,1 @@
+The reason that the two codes (foo.c and foo.go) provide different results each time you run them is because of a phenomenon called race conditions. The code has two threads that each perform an operations on the same variable simultainiously, and because the code lacks syncronization these threads interfere with each other and cause unpredictable results. 
