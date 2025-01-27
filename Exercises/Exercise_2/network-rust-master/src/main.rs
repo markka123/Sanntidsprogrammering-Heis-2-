@@ -25,11 +25,11 @@ fn main() -> std::io::Result<()> {
             .local_addr()
             .unwrap()
             .ip();
-        format!("rust@{}#{}", local_ip, process::id())
+        format!("Sendig msg from: rust@{}#{}", local_ip, process::id())
     };
 
     let msg_port = 19735;
-    let peer_port = 19738;
+    let peer_port = 30000; //19738
 
     // The sender for peer discovery
     let (peer_tx_enable_tx, peer_tx_enable_rx) = cbc::unbounded::<bool>();
@@ -47,12 +47,12 @@ fn main() -> std::io::Result<()> {
     // (periodically disable/enable the peer broadcast, to provoke new peer / peer loss messages)
     // This is only for demonstration purposes, if using this module in your project do not include
     // this
-    spawn(move || loop {
-        sleep(Duration::new(6, 0));
-        peer_tx_enable_tx.send(false).unwrap();
-        sleep(Duration::new(3, 0));
-        peer_tx_enable_tx.send(true).unwrap();
-    });
+    // spawn(move || loop {
+    //     sleep(Duration::new(6, 0));
+    //     peer_tx_enable_tx.send(false).unwrap();
+    //     sleep(Duration::new(3, 0));
+    //     peer_tx_enable_tx.send(true).unwrap();
+    // });
 
     // The receiver for peer discovery updates
     let (peer_update_tx, peer_update_rx) = cbc::unbounded::<udpnet::peers::PeerUpdate>();
@@ -101,16 +101,16 @@ fn main() -> std::io::Result<()> {
         }
     });
 
-    // main body: receive peer updates and data from the network
+    // main body: receive peer updates and data from the network 
     loop {
         cbc::select! {
             recv(peer_update_rx) -> a => {
                 let update = a.unwrap();
-                println!("{:#?}", update);
+                println!("New peer identified: {:#?}", update);
             }
             recv(custom_data_recv_rx) -> a => {
                 let cd = a.unwrap();
-                println!("{:#?}", cd);
+                println!("\n Recieved custom msg: \n - Message: {} \n - Iteration: {} \n", cd.message, cd.iteration);
             }
         }
     }
