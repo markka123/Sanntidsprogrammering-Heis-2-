@@ -1,0 +1,32 @@
+[package]
+name = "network-rust"
+version = "0.1.0"
+authors = ["Edvard Severin Pettersen <edvard.pettersen@gmail.com>"]
+license = "MIT"
+
+[profile.dev]
+opt-level = 0
+debug = true
+rpath = true
+lto = false
+debug-assertions = true
+codegen-units = 1
+panic = 'unwind'
+
+[lib]
+name = "network_rust"
+path = "src/lib.rs"
+
+[[bin]]
+name = "network_test"
+path = "src/main.rs"
+
+[dependencies]
+lazy_static = "0.1"
+serde = "0.8"
+serde_json = "0.8"
+serde_derive = "0.8"
+net2 = "0.2"
+chrono = "0.2"
+rand = "0.3"
+
