@@ -29,7 +29,8 @@ fn main() -> std::io::Result<()> {
     };
 
     let msg_port = 19735;
-    let peer_port = 30000; //19738
+    let peer_port = 20003; //19738
+    let server_port = 30000;
 
     // The sender for peer discovery
     let (peer_tx_enable_tx, peer_tx_enable_rx) = cbc::unbounded::<bool>();
@@ -47,12 +48,12 @@ fn main() -> std::io::Result<()> {
     // (periodically disable/enable the peer broadcast, to provoke new peer / peer loss messages)
     // This is only for demonstration purposes, if using this module in your project do not include
     // this
-    // spawn(move || loop {
-    //     sleep(Duration::new(6, 0));
-    //     peer_tx_enable_tx.send(false).unwrap();
-    //     sleep(Duration::new(3, 0));
-    //     peer_tx_enable_tx.send(true).unwrap();
-    // });
+    spawn(move || loop {
+        sleep(Duration::new(6, 0));
+        peer_tx_enable_tx.send(false).unwrap();
+        sleep(Duration::new(3, 0));
+        peer_tx_enable_tx.send(true).unwrap();
+    });
 
     // The receiver for peer discovery updates
     let (peer_update_tx, peer_update_rx) = cbc::unbounded::<udpnet::peers::PeerUpdate>();
@@ -101,16 +102,32 @@ fn main() -> std::io::Result<()> {
         }
     });
 
+
+    // the receiver for server messages
+    let (server_recv_tx, server_recv_rx) = cbc::unbounded::<String>();
+    spawn(move || {
+        if udpnet::bcast::rx(server_port, server_recv_tx).is_err() {
+            // crash program if creating the socket fails (`bcast:rx` will always block if the
+            // initialization succeeds)
+            process::exit(1);
+        }
+    });
+
+
     // main body: receive peer updates and data from the network 
     loop {
         cbc::select! {
             recv(peer_update_rx) -> a => {
                 let update = a.unwrap();
-                println!("New peer identified: {:#?}", update);
+                println!("new peer identified: {:#?}", update);
             }
             recv(custom_data_recv_rx) -> a => {
                 let cd = a.unwrap();
-                println!("\n Recieved custom msg: \n - Message: {} \n - Iteration: {} \n", cd.message, cd.iteration);
+                println!("\n recieved custom msg: \n - message: {} \n - iteration: {} \n", cd.message, cd.iteration);
+            }
+            recv(server_recv_rx) -> a => {
+                let cd = a.unwrap();
+                println!("Recieved from server: {}", cd);
             }
         }
     }

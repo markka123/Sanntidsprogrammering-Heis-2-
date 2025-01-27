@@ -171,7 +171,7 @@ impl PeerReceiver {
     pub fn run<T>(self, update_tx: mpsc::Sender<PeerUpdate<T>>) -> !
         where T: serde::de::Deserialize + Hash + Eq + Clone + Ord,
     {
-        let mut last_seen = HashMap::new();
+        let mut last_seen = HashMap::new();;
         loop {
             let mut peer_update = PeerUpdate::new();
             let mut updated = false;

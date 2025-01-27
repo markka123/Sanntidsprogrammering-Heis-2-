@@ -10,7 +10,7 @@ lazy_static! {
 pub fn get_localip() -> Result<IpAddr> {
     let mut local_ip = LOCAL_IP.lock().unwrap();
     let old_ip = local_ip.clone();
-    match old_ip {
+    match old_ip {msg_port
         None => {
             let socket = try!(TcpStream::connect("8.8.8.8:53"));
             let ip = try!(socket.local_addr()).ip();
