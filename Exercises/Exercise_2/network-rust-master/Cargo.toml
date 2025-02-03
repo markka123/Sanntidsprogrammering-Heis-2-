@@ -26,6 +26,11 @@ name = "receiver"
 path = "src/receiver.rs"
 
 [[bin]]
+name = "transmitter"
+path = "src/transmitter.rs"
+
+
+[[bin]]
 name = "tcp_transmitter"
 path = "src/tcp_transmitter.rs"
 

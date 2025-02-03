@@ -69,6 +69,9 @@ fn main() -> std::io::Result<()> {
 
     // Periodically produce a custom data message
     let (custom_data_send_tx, custom_data_send_rx) = cbc::unbounded::<CustomDataType>();
+    let (custom_data_send_tx, custom_rx) = cbc::unbounded::<CustomDataType>();
+    
+    
     {
         spawn(move || {
             let mut cd = CustomDataType {
@@ -82,6 +85,8 @@ fn main() -> std::io::Result<()> {
             }
         });
     }
+
+    
     // The sender for our custom data
     {
         spawn(move || {
