@@ -10,7 +10,6 @@ fn main() -> std::io::Result<()> {
     let elev_num_floors = 4;
     let elevator = e::Elevator::init("localhost:15657", elev_num_floors)?;
     println!("Elevator started:\n{:#?}", elevator);
-
     let poll_period = Duration::from_millis(25);
 
     let (call_button_tx, call_button_rx) = cbc::unbounded::<elevio::poll::CallButton>();
@@ -45,22 +44,14 @@ fn main() -> std::io::Result<()> {
     loop {
         cbc::select! {
             recv(call_button_rx) -> a => {
+                
                 let call_button = a.unwrap();
                 println!("{:#?}", call_button);
                 elevator.call_button_light(call_button.floor, call_button.call, true);
             },
             recv(floor_sensor_rx) -> a => {
-                let floor = a.unwrap();
-                println!("Floor: {:#?}", floor);
-                dirn =
-                    if floor == 0 {
-                        e::DIRN_UP
-                    } else if floor == elev_num_floors-1 {
-                        e::DIRN_DOWN
-                    } else {
-                        dirn
-                    };
-                elevator.motor_direction(dirn);
+                elevatorVariables.currentFloor = a.unwrap();
+                setDirection(&elevatorVariables, &elevator, &order); //kan byttes med handleorders
             },
             recv(stop_button_rx) -> a => {
                 let stop = a.unwrap();
