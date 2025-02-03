@@ -10,7 +10,7 @@ struct CustomDataType {
 }
 
 fn main() -> std::io::Result<()> {
-    let msg_port = 30000;
+    let msg_port = 20003;
 
     let (custom_data_recv_tx, custom_data_recv_rx) = cbc::unbounded::<CustomDataType>();
     // Mottar data på nettverket
