@@ -6,6 +6,8 @@ use crossbeam_channel as cbc;
 use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 
+use driver_rust::button_handler::create_order::{AllOrders};
+
 fn main() -> std::io::Result<()> {
     let elev_num_floors = 4;
     let elevator = e::Elevator::init("localhost:15657", elev_num_floors)?;
@@ -42,12 +44,15 @@ fn main() -> std::io::Result<()> {
         elevator.motor_direction(dirn);
     }
 
+    let mut orders = AllOrders::init(1, elevator.num_floors as usize);
+
     loop {
         cbc::select! {
             recv(call_button_rx) -> a => {
                 let call_button = a.unwrap();
-                println!("{:#?}", call_button);
-                elevator.call_button_light(call_button.floor, call_button.call, true);
+                orders.add_order(call_button, 0);
+                println!("{:#?}", orders);
+                // elevator.call_button_light(call_button.floor, call_button.call, true);
             },
             recv(floor_sensor_rx) -> a => {
                 let floor = a.unwrap();
