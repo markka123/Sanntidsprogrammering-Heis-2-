@@ -1,5 +1,24 @@
 // REASSIGNING ALL ORDERS
 
+// INPUT
+// {
+//     "hallRequests" : 
+//         [[Boolean, Boolean], ...],
+//     "states" : 
+//         {
+//             "id_1" : {
+//                 "behaviour"     : < "idle" | "moving" | "doorOpen" >
+//                 "floor"         : NonNegativeInteger
+//                 "direction"     : < "up" | "down" | "stop" >
+//                 "cabRequests"   : [Boolean, ...]
+//             },
+//             "id_2" : {...}
+//         }
+// }
+
+//ANDREAS: Jeg vil ha states som en matrise der hver heis har sin rad (id1 -> rad 1) og de relevante variablene ligger på den raden i rekkefølgen [behaviour, floor, direction], de mulige alternativene står over og her er et eksempel:   let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
+
+
 // PACKAGES
 use std::process::{Command, Stdio};
 use serde_json::{json};
@@ -15,7 +34,7 @@ fn assign_requests(
 ) -> String {
 
     let mut states = serde_json::Map::new();
-    
+
     for (i, elevator) in elevator_variables.iter().enumerate() {
         let state = json!({
             "behaviour": elevator[0],
@@ -59,8 +78,8 @@ fn assign_requests(
 //MAIN
 
 fn main() {
-    let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()], vec!["idle".to_string(), "0".to_string(), "stop".to_string()]];
-    let cab_requests = vec![vec![false, false, true, true], vec![false, false, false, false]];
+    let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
+    let cab_requests = vec![vec![false, false, true, true]];
     let hall_requests = vec![vec![false, false], vec![true, false], vec![false, false], vec![false, true]];
 
 
