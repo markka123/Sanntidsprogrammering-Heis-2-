@@ -16,13 +16,14 @@
 //         }
 // }
 
-//ANDREAS: Jeg vil ha states som en matrise der hver heis har sin rad (id1 -> rad 1) og de relevante variablene ligger på den raden i rekkefølgen [behaviour, floor, direction], de mulige alternativene står over og her er et eksempel:   let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
+//Til ANDREAS: Jeg vil ha states som en matrise der hver heis har sin rad (id1 -> rad 1) og de relevante variablene ligger på den raden i rekkefølgen [behaviour, floor, direction], de mulige alternativene står over og her er et eksempel:   let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
 
-
+#![allow(dead_code)]
 // PACKAGES
 use std::process::{Command, Stdio};
 use serde_json::{json};
 use num2words::Num2Words;
+
 
 
 
@@ -60,7 +61,7 @@ fn assign_requests(
     println!("JSON Input:\n{}", json_input_string);
 
     // Path to the executable
-    let executable_path = "src/offlineOrderHandler/executables/hall_request_assigner.exe";
+    let executable_path = "src/offline_order_handler/executables/hall_request_assigner.exe";
 
     // Call the executable using command-line arguments
     let output = Command::new(executable_path)
@@ -75,9 +76,10 @@ fn assign_requests(
     output_str
 }
 
+
 //MAIN
 
-fn main() {
+pub fn execute_offline_order() {
     let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
     let cab_requests = vec![vec![false, false, true, true]];
     let hall_requests = vec![vec![false, false], vec![true, false], vec![false, false], vec![false, true]];
@@ -86,7 +88,5 @@ fn main() {
     let result = assign_requests(elevator_variables, cab_requests, hall_requests);
     println!("Result from executable:\n{}", result);
 
+
 }
-
-
-
