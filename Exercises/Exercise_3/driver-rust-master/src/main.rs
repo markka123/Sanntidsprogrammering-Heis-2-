@@ -7,6 +7,7 @@ use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 
 use driver_rust::button_handler::create_order::{AllOrders};
+use driver_rust::offline_order_handler::offline_order_handler::{execute_offline_order};
 
 fn main() -> std::io::Result<()> {
     let elev_num_floors = 4;
@@ -45,14 +46,14 @@ fn main() -> std::io::Result<()> {
     }
 
     let mut orders = AllOrders::init(1, elevator.num_floors as usize);
-
+    execute_offline_order();
     loop {
         cbc::select! {
             recv(call_button_rx) -> a => {
                 let call_button = a.unwrap();
                 orders.add_order(call_button, 0);
                 println!("{:#?}", orders);
-                // elevator.call_button_light(call_button.floor, call_button.call, true);
+                elevator.call_button_light(call_button.floor, call_button.call, true);
             },
             recv(floor_sensor_rx) -> a => {
                 let floor = a.unwrap();
