@@ -5,6 +5,6 @@ pub mod elevio {
 }
 
 pub mod elevator_controller {
-    pub mod direction;
+    pub mod order_handler;
     pub mod state_machine;
 }

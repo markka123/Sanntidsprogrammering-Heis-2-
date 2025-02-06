@@ -3,7 +3,7 @@ struct order {
     iteration: u64,
 }
 
-typedef orderMatrix {
+struct orderMatrix {
     int size;
     Order orderArr[10];
 };
