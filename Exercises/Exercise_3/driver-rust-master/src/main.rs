@@ -7,6 +7,7 @@ use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 
 use driver_rust::button_handler::create_order::{AllOrders};
+use driver_rust::elevator_controller::order_handler as ch
 
 fn main() -> std::io::Result<()> {
     let elev_num_floors = 4;
@@ -44,11 +45,11 @@ fn main() -> std::io::Result<()> {
     }
 
     let mut orders = AllOrders::init(1, elevator.num_floors as usize);
+    let mut orderQueue = 
 
     loop {
         cbc::select! {
             recv(call_button_rx) -> a => {
-                
                 let call_button = a.unwrap();
                 orders.add_order(call_button, 0);
                 println!("{:#?}", orders);
