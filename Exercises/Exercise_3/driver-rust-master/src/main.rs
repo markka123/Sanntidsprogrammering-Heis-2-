@@ -46,10 +46,25 @@ fn main() -> std::io::Result<()> {
 
     let mut orders = AllOrders::init(1, elevator.num_floors as usize);
 
+
+    let (door_tx, door_rx) =cbc::unbounded::<bool>();
+
+
+
+
+
+
+
+
+
+
+
     loop {
         cbc::select! {
             recv(call_button_rx) -> a => {
-                let call_button = a.unwrap();
+                lelet door = a.unwrap();
+                println!("Door: {:#?}", door);
+                elevator.door_light(door);t call_button = a.unwrap();
                 orders.add_order(call_button, 0);
                 println!("{:#?}", orders);
                 // elevator.call_button_light(call_button.floor, call_button.call, true);
@@ -81,6 +96,12 @@ fn main() -> std::io::Result<()> {
                 println!("Obstruction: {:#?}", obstr);
                 elevator.motor_direction(if obstr { e::DIRN_STOP } else { dirn });
             },
+            recv(door_rx) -> a => {
+                
+            },
         }
     }
 }
+
+
+//new order, deliverd order, new state, door_open, 

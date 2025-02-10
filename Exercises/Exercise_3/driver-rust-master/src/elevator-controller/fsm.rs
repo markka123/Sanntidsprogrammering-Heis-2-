@@ -21,8 +21,11 @@ pub enum Behaviour {
     DoorsOpen,
 }
 
-fsm_floor_detected(state: &State, orders: &Vec<Vec<>>, floor: &u8) {
+
+
+fsm_floor_detected(state: &State, orders: &Vec<Vec<>>) {
     match state.Direction {
+
         
     }
 }
