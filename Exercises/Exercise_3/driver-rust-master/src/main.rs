@@ -1,17 +1,16 @@
 use std::thread::*;
 use std::time::*;
-
 use crossbeam_channel as cbc;
-
 use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
-
-use driver_rust::button_handler::create_order::{AllOrders};
+use driver_rust::elevator_controller;
+use driver_rust::elevator_controller::orders::{AllOrders, Orders};
 use driver_rust::offline_order_handler::offline_order_handler::{execute_offline_order};
+use driver_rust::config::config;
 
 fn main() -> std::io::Result<()> {
-    let elev_num_floors = 4;
-    let elevator = e::Elevator::init("localhost:15657", elev_num_floors)?;
+    
+    let elevator = e::Elevator::init("localhost:15657", config::elev_num_floors)?;
     println!("Elevator started:\n{:#?}", elevator);
 
     let poll_period = Duration::from_millis(25);
@@ -40,53 +39,60 @@ fn main() -> std::io::Result<()> {
         spawn(move || elevio::poll::obstruction(elevator, obstruction_tx, poll_period));
     }
 
-    let mut dirn = e::DIRN_DOWN;
+    let mut dirn = e::DIRN_UP;
     if elevator.floor_sensor().is_none() {
         elevator.motor_direction(dirn);
     }
 
-    let mut all_orders = AllOrders::init(1, elevator.num_floors as usize);
+    
+    let mut all_orders = AllOrders::init();
   
   // Example orderQueue
-    let mut orders = [[false,false,false],[true,false,false],[false,false,true],[false,true,true]]
+    let mut orders = [[false,false,false],[true,false,false],[false,false,true],[false,true,true]];
   
     // execute_offline_order();
+
+    let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
+    {
+        let elevator = elevator.clone();
+        spawn(move || elevator_controller::fsm::fsm_elevator(elevator, floor_sensor_rx, stop_button_rx, obstruction_rx, new_order_rx));
+    }
+    
 
     loop {
         cbc::select! {
             recv(call_button_rx) -> a => {
                 let call_button = a.unwrap();
-                orders.add_order(call_button, 0);
-                println!("{:#?}", orders);
+                all_orders.add_order(call_button.clone(), 0, &new_order_tx);
                 elevator.call_button_light(call_button.floor, call_button.call, true);
             },
-            recv(floor_sensor_rx) -> a => {
-                let floor = a.unwrap();
-                println!("Floor: {:#?}", floor);
-                dirn =
-                    if floor == 0 {
-                        e::DIRN_UP
-                    } else if floor == elev_num_floors-1 {
-                        e::DIRN_DOWN
-                    } else {
-                        dirn
-                    };
-                elevator.motor_direction(dirn);
-            },
-            recv(stop_button_rx) -> a => {
-                let stop = a.unwrap();
-                println!("Stop button: {:#?}", stop);
-                for f in 0..elev_num_floors {
-                    for c in 0..3 {
-                        elevator.call_button_light(f, c, false);
-                    }
-                }
-            },
-            recv(obstruction_rx) -> a => {
-                let obstr = a.unwrap();
-                println!("Obstruction: {:#?}", obstr);
-                elevator.motor_direction(if obstr { e::DIRN_STOP } else { dirn });
-            },
+            // recv(floor_sensor_rx) -> a => {
+            //     let floor = a.unwrap();
+            //     println!("Floor: {:#?}", floor);
+            //     dirn =
+            //         if floor == 0 {
+            //             e::DIRN_UP
+            //         } else if floor == config::elev_num_floors-1 {
+            //             e::DIRN_DOWN
+            //         } else {
+            //             dirn
+            //         };
+            //     elevator.motor_direction(dirn);
+            // },
+            // recv(stop_button_rx) -> a => {
+            //     let stop = a.unwrap();
+            //     println!("Stop button: {:#?}", stop);
+            //     for f in 0..config::elev_num_floors {
+            //         for c in 0..3 {
+            //             elevator.call_button_light(f, c, false);
+            //         }
+            //     }
+            // },
+            // recv(obstruction_rx) -> a => {
+            //     let obstr = a.unwrap();
+            //     println!("Obstruction: {:#?}", obstr);
+            //     elevator.motor_direction(if obstr { e::DIRN_STOP } else { dirn });
+            // },
         }
     }
 }
