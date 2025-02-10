@@ -10,7 +10,7 @@ pub struct State {
 	pub motorstop: bool,
 	pub behaviour: Behaviour,
 	pub floor: u8,
-	pub Direction,
+    pub direction: u8,
 }
 
 pub enum Behaviour {
@@ -19,17 +19,28 @@ pub enum Behaviour {
     DoorsOpen,
 }
 
-#[derive(Debug)]
-pub struct ElevatorVariables {
-    pub current_floor: u8,
-    pub direction: u8,
-    pub doors: Doors,
-    pub state: State,
+fn fsm_floor_entered() {}
+
+fn fsm_new_order(state: State, orders: Vec<Vec<bool>>) {
+    match state.behaviour {
+        Behaviour::Idle => {
+            match () {
+                _ if orders[state.floor][state.direction] || orders[state.floor][CAB] {
+                    openDoors();
+                    orderCompleted(state.floor, CAB);
+                    state.behaviour = Behaviour::DoorsOpen;
+                    newState()
+                }
+            }
+        }
+        Behaviour::DoorsOpen => {
+
+        }
+        Behaviour::Moving => {
+
+        }
+    }
 }
-
-fsm_floor_detected()
-
-fsm_new_order()
 
 fsm_doors_closed()
 

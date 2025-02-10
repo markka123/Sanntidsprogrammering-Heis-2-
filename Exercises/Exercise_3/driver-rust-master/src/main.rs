@@ -44,7 +44,10 @@ fn main() -> std::io::Result<()> {
         elevator.motor_direction(dirn);
     }
 
-    let mut orders = AllOrders::init(1, elevator.num_floors as usize);
+    let mut all_orders = AllOrders::init(1, elevator.num_floors as usize);
+
+    // Example orderQueue
+    let mut orders = [[false,false,false],[true,false,false],[false,false,true],[false,true,true]]
 
     loop {
         cbc::select! {
