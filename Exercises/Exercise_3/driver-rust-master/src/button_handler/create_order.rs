@@ -9,7 +9,6 @@ pub struct AllOrders {
     // Init with: let matrix = Matrix::new(rows, cols, false);
     pub hall_orders: Vec<[bool; 2]>,
     pub cab_orders: Vec<Vec<bool>>,
-
 }
 
 impl AllOrders {
