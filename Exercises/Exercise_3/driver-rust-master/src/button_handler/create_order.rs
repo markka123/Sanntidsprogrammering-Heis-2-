@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use crate::elevio::elev as e;
 use crate::elevio::elev::{HALL_UP, HALL_DOWN, CAB, DIRN_DOWN, DIRN_STOP, DIRN_UP};
 use crate::elevio::poll::{CallButton};
 

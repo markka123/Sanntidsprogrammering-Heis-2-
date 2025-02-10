@@ -4,6 +4,8 @@ use crate::elevio::elev as e;
 use crate::elevio::elev::{HALL_UP, HALL_DOWN, CAB, DIRN_DOWN, DIRN_STOP, DIRN_UP};
 use crate::elevio::poll::{CallButton};
 
+
+
 #[derive(Clone, Debug)]
 pub struct State {
     pub obstructed: bool,
@@ -19,15 +21,11 @@ pub enum Behaviour {
     DoorsOpen,
 }
 
-#[derive(Debug)]
-pub struct ElevatorVariables {
-    pub current_floor: u8,
-    pub direction: u8,
-    pub doors: Doors,
-    pub state: State,
+fsm_floor_detected(state: &State, orders: &Vec<Vec<>>, floor: &u8) {
+    match state.Direction {
+        
+    }
 }
-
-fsm_floor_detected()
 
 fsm_new_order()
 
