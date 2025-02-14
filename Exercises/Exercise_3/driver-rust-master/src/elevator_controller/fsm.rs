@@ -14,7 +14,7 @@ use crossbeam_channel as cbc;
 pub enum Behaviour {
     Idle,
     Moving,
-    DoorsOpen,
+    DoorOpen,
 }
 
 #[derive(Clone, Debug)]
@@ -94,7 +94,7 @@ pub fn fsm_elevator(
                             
                         }
                     },
-                    Behaviour::DoorsOpen => {
+                    Behaviour::DoorOpen => {
                         
                     },
                     Behaviour::Moving => {
@@ -111,9 +111,14 @@ pub fn fsm_elevator(
                 match state.behaviour {
                     Behaviour::Moving => {
                         if orders[state.floor as usize][state.direction as usize] || orders[state.floor as usize][CAB as usize] {
+                            elevator.motor_direction(DIRN_STOP);
                             door_open_tx.send(true).unwrap();
-
+                            orders::order_done(floor, state.direction, orders, &delivered_order_tx);
+                            state.behaviour = Behaviour::DoorOpen;
                         }
+                        else if orders[state.floor as usize][CAB as usize] && orders::order_in_direction(&orders, state.floor, state.direction) {
+                            
+                        } 
                     },
                     _ => {
                         println!("Floor indicator received while in unexpected state")
