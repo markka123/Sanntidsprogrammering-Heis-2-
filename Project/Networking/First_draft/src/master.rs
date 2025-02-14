@@ -32,7 +32,9 @@ fn send_heartbeat() {
 // Master receives updates from slaves
 fn listen_for_slaves() {
 
-    let socket = UdpSocket::bind(format!("{}:{}", BROADCAST_IP, MASTER_HEARTBEAT_PORT)).expect("Failed to bind UDP socket");
+    let socket = UdpSocket::bind(format!("0.0.0.0:{}", MASTER_HEARTBEAT_PORT))
+    .expect("Failed to bind UDP socket");
+
 
     loop {
         if let Some(state) = receive_message::<State>(&socket) {
