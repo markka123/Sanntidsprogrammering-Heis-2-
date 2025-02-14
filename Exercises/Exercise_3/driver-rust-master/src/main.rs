@@ -47,6 +47,10 @@ fn main() -> std::io::Result<()> {
     
     let mut all_orders = AllOrders::init();
   
+    
+  // Example orderQueue
+    let mut orders = [[false,false,false],[true,false,false],[false,false,true],[false,true,true]];
+  
     // execute_offline_order();
 
     let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
