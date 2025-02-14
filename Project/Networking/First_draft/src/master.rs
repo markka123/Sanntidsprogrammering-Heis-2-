@@ -3,6 +3,8 @@ use crate::message_variables::*;
 use crate::networking::*;
 use std::thread;
 use std::time::Duration;
+use std::net::UdpSocket;
+
 
 pub fn start_master() {
     println!("[Master] Running...");
@@ -23,26 +25,36 @@ fn send_heartbeat() {
             floor: 0,
             direction: 0,
         };        
-        send_message(&master_state, "255.255.255.255", MASTER_HEARTBEAT_PORT);
+        send_message(&master_state, BROADCAST_IP, MASTER_HEARTBEAT_PORT);
         thread::sleep(Duration::from_secs(2));
     }
 }
 
 // Master receives updates from slaves
 fn listen_for_slaves() {
+    let socket = UdpSocket::bind(MASTER_HEARTBEAT_PORT).expect("Failed to bind UDP socket");
+
     loop {
-        if let Some(state) = receive_message::<State>(MASTER_HEARTBEAT_PORT) {
+        if let Some(state) = receive_message::<State>(&socket) {
+            if state.id == MASTER_IP {
+                continue;
+            }
             println!("[Master] Received state update: {:?}", state);
         }
     }
 }
 
+
 // Master receives order requests & assigns orders
 fn listen_for_orders() {
+    let socket = UdpSocket::bind(format!("0.0.0.0:{}", SLAVE_HEARTBEAT_PORT))
+        .expect("Failed to bind UDP socket");
+    
     loop {
-        if let Some(order) = receive_message::<OrderMessage>(SLAVE_HEARTBEAT_PORT) {
+        if let Some(order) = receive_message::<OrderMessage>(&socket) {        
             println!("[Master] Received order request: {:?}", order);
             send_message(&order, &order.id, ORDER_ASSIGNMENT_PORT);
         }
     }
 }
+
