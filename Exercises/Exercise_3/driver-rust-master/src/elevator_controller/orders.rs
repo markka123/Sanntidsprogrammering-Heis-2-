@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crossbeam_channel as cbc;
-use crate::elevio::elev as e;
+use crate::elevio::{self, elev as e};
 use crate::elevio::elev::{HALL_UP, HALL_DOWN, CAB, DIRN_DOWN, DIRN_STOP, DIRN_UP};
 use crate::elevio::poll::{CallButton};
 use crate::config::config;
@@ -62,4 +62,7 @@ pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
         },
         _ => false,
     }
+}
+
+pub fn order_done(floor: u8, dir: u8, orders: Orders, delivered_order_tx: cbc::Sender<elevio::poll::CallButton>) {
 }
