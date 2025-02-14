@@ -46,6 +46,7 @@ fn main() -> std::io::Result<()> {
 
     let mut orders = AllOrders::init(1, elevator.num_floors as usize);
 
+
     loop {
         cbc::select! {
             recv(call_button_rx) -> a => {
