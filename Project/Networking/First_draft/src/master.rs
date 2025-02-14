@@ -27,7 +27,6 @@ fn send_heartbeat() {
             direction: 0,
         };        
         send_message(&master_state, BROADCAST_IP, MASTER_HEARTBEAT_PORT);
-        send_message(&master_state, BROADCAST_IP, MASTER_HEARTBEAT_PORT);
         thread::sleep(Duration::from_secs(2));
     }
 }
@@ -57,7 +56,6 @@ fn listen_for_slaves() {
         }
     }
 }
-
 
 fn listen_for_orders() {
     let socket = create_reusable_udp_socket(SLAVE_HEARTBEAT_PORT);
