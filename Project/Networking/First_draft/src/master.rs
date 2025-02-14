@@ -1,0 +1,48 @@
+use crate::config::*;
+use crate::message_variables::*;
+use crate::networking::*;
+use std::thread;
+use std::time::Duration;
+
+pub fn start_master() {
+    println!("[Master] Running...");
+
+    thread::spawn(send_heartbeat);
+    thread::spawn(listen_for_slaves);
+    listen_for_orders();
+}
+
+// Master sends heartbeat every 2 seconds
+fn send_heartbeat() {
+    loop {
+        let master_state = State {
+            id: MASTER_IP.to_string(),  // Added ID field
+            obstructed: false,
+            motorstop: false,
+            behaviour: Behaviour::Idle,
+            floor: 0,
+            direction: 0,
+        };        
+        send_message(&master_state, "255.255.255.255", MASTER_HEARTBEAT_PORT);
+        thread::sleep(Duration::from_secs(2));
+    }
+}
+
+// Master receives updates from slaves
+fn listen_for_slaves() {
+    loop {
+        if let Some(state) = receive_message::<State>(MASTER_HEARTBEAT_PORT) {
+            println!("[Master] Received state update: {:?}", state);
+        }
+    }
+}
+
+// Master receives order requests & assigns orders
+fn listen_for_orders() {
+    loop {
+        if let Some(order) = receive_message::<OrderMessage>(SLAVE_HEARTBEAT_PORT) {
+            println!("[Master] Received order request: {:?}", order);
+            send_message(&order, &order.id, ORDER_ASSIGNMENT_PORT);
+        }
+    }
+}
