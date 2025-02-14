@@ -4,7 +4,9 @@ use crate::networking::*;
 use crate::master::start_master;
 use std::thread;
 use std::time::{Duration, Instant};
-use std::net::UdpSocket;
+use std::net::{UdpSocket, SocketAddr};
+use socket2::{Socket, Domain, Type};
+use std::str::FromStr;
 
 pub fn start_slave(my_id: &str) {
     println!("[Slave] Running with ID: {}", my_id);
@@ -76,10 +78,20 @@ fn listen_for_orders(_my_id: String) {
 }
 
 // Slave listens for master's heartbeat & detects failure
-fn listen_for_master_heartbeat(_my_id: String) {
-    let socket = UdpSocket::bind(format!("0.0.0.0:{}", SLAVE_HEARTBEAT_PORT))
-        .expect("Failed to bind to master heartbeat port");
+fn create_reusable_udp_socket(port: &str) -> UdpSocket {
+    let addr = SocketAddr::from_str(&format!("0.0.0.0:{}", port))
+        .expect("Invalid socket address");  // ✅ Explicit type annotation
 
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).expect("Failed to create socket");
+    socket.set_reuse_address(true).expect("Failed to set SO_REUSEADDR"); // ✅ Only reuse_address
+    socket.bind(&addr.into()).expect("Failed to bind UDP socket");
+
+    socket.into()
+}
+
+/// Slave listens for master's heartbeat and detects failure
+fn listen_for_master_heartbeat(_my_id: String) {
+    let socket = create_reusable_udp_socket(MASTER_HEARTBEAT_PORT);
     let mut last_heartbeat = Instant::now();
 
     loop {
@@ -93,7 +105,6 @@ fn listen_for_master_heartbeat(_my_id: String) {
             }
         }
 
-        // Check if master has been silent for too long
         if last_heartbeat.elapsed().as_secs() > TIMEOUT_SECS * 2 {
             println!("[Slave] Master is unresponsive! Taking over as master...");
             start_master();
