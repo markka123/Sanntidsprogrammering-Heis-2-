@@ -1,6 +1,8 @@
 use std::net::UdpSocket;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::time::Duration;
+use crate::config::TIMEOUT_SECS;
 
 pub fn send_message<T: Serialize>(message: &T, ip: &str, port: &str) {
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind socket");
@@ -24,11 +26,16 @@ pub fn send_message<T: Serialize>(message: &T, ip: &str, port: &str) {
 pub fn receive_message<T: DeserializeOwned>(socket: &UdpSocket) -> Option<T> {
     let mut buffer = [0; 1024];
 
+    socket.set_read_timeout(Some(Duration::from_secs(TIMEOUT_SECS)))
+        .expect("Failed to set read timeout");
+
     match socket.recv_from(&mut buffer) {
         Ok((size, _)) => {
-            let message: T = serde_json::from_slice(&buffer[..size]).expect("Failed to deserialize message");
+            let message: T = serde_json::from_slice(&buffer[..size])
+                .expect("Failed to deserialize message");
             Some(message)
         }
-        Err(_) => None,
+        Err(_) => None, // Return None if no message received
     }
 }
+
