@@ -24,9 +24,6 @@ use std::process::{Command, Stdio};
 use serde_json::{json};
 use num2words::Num2Words;
 
-
-
-
 //ASSIGN_REQUESTS
 fn assign_requests(
     elevator_variables: Vec<Vec<String>>,
@@ -51,7 +48,6 @@ fn assign_requests(
         states.insert(word, state);
     }
     
-
     let json_input = json!({
         "hallRequests": hall_requests,
         "states": states,

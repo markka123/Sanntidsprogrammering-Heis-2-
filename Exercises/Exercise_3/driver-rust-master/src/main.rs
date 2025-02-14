@@ -7,6 +7,7 @@ use driver_rust::elevator_controller;
 use driver_rust::elevator_controller::orders::{AllOrders, Orders};
 use driver_rust::offline_order_handler::offline_order_handler::{execute_offline_order};
 use driver_rust::config::config;
+use driver_rust::elevator_controller::lights;
 
 fn main() -> std::io::Result<()> {
     
@@ -63,25 +64,16 @@ fn main() -> std::io::Result<()> {
     
 
     loop {
+        lights::set_lights(&all_orders, elevator.clone());
         cbc::select! {
             recv(call_button_rx) -> a => {
                 let call_button = a.unwrap();
-                all_orders.add_order(call_button.clone(), 0, &new_order_tx);
-                elevator.call_button_light(call_button.floor, call_button.call, true);
+                all_orders.add_order(call_button.clone(), config::elev_id as usize, &new_order_tx);
             },
-            // recv(floor_sensor_rx) -> a => {
-            //     let floor = a.unwrap();
-            //     println!("Floor: {:#?}", floor);
-            //     dirn =
-            //         if floor == 0 {
-            //             e::DIRN_UP
-            //         } else if floor == config::elev_num_floors-1 {
-            //             e::DIRN_DOWN
-            //         } else {
-            //             dirn
-            //         };
-            //     elevator.motor_direction(dirn);
-            // },
+            recv(delivered_order_rx) -> a => {
+                let call_button = a.unwrap();
+                all_orders.remove_order(call_button, config::elev_id as usize);
+            },
             // recv(stop_button_rx) -> a => {
             //     let stop = a.unwrap();
             //     println!("Stop button: {:#?}", stop);

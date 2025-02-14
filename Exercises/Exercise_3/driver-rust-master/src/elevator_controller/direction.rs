@@ -1,17 +1,17 @@
-use crate::elevio::elev::{DIRN_DOWN, DIRN_STOP, DIRN_UP, HALL_DOWN, HALL_UP};
+use crate::elevio::elev::{DIRN_DOWN, DIRN_STOP, DIRN_UP, HALL_DOWN, HALL_UP, CAB};
 
 pub fn direction_opposite(direction: u8) -> u8 {
     match direction {
-        DIRN_DOWN => DIRN_UP,
-        DIRN_UP => DIRN_DOWN,
-        _ => DIRN_STOP,
+        HALL_UP => HALL_DOWN,
+        HALL_DOWN => HALL_UP,
+        _ => CAB,
     }
 }
 
-pub fn md_to_hall_button(direction: u8) -> u8 {
+pub fn call_to_md(direction: u8) -> u8 {
     match direction {
-        DIRN_DOWN => HALL_DOWN,
-        DIRN_UP => HALL_UP,
-        _ => 125, //fix error handling
+        HALL_DOWN => DIRN_DOWN,
+        HALL_UP => DIRN_UP,
+        _ => CAB, //fix error handling
     }
 }

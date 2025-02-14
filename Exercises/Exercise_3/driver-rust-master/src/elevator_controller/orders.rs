@@ -23,9 +23,9 @@ impl AllOrders {
         let orders = [[false; 3]; config::elev_num_floors as usize];
         Self { hall_orders,  cab_orders, orders}
     }
-    pub fn add_order(&mut self, call_button: CallButton, _elevator_nr: usize, new_order_tx: &cbc::Sender<Orders>) {
-        if CAB == call_button.call {
-            self.cab_orders[_elevator_nr][call_button.floor as usize] = true;
+    pub fn add_order(&mut self, call_button: CallButton, elevator_id: usize, new_order_tx: &cbc::Sender<Orders>) {
+        if call_button.call == CAB {
+            self.cab_orders[elevator_id][call_button.floor as usize] = true;
         }
         else if call_button.call == HALL_DOWN || call_button.call == HALL_UP {
             self.hall_orders[call_button.floor as usize][call_button.call as usize] = true;
@@ -36,12 +36,25 @@ impl AllOrders {
         self.orders[call_button.floor as usize][call_button.call as usize] = true;
         new_order_tx.send(self.orders).unwrap();
     }
+
+    pub fn remove_order(&mut self, call_button: CallButton, elevator_id: usize,) {
+        if call_button.call == CAB {
+            self.cab_orders[elevator_id][call_button.floor as usize] = false;
+        }
+        else if call_button.call == HALL_DOWN || call_button.call == HALL_UP {
+            self.hall_orders[call_button.floor as usize][call_button.call as usize] = false;
+        }
+        else {
+            //Handle error
+        }
+        self.orders[call_button.floor as usize][call_button.call as usize] = false;
+    }
 }
 
 pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
     match dir {
-        DIRN_UP => {
-            for f in (floor)..config::elev_num_floors {
+        HALL_UP => {
+            for f in (floor+1)..config::elev_num_floors {
                 for b in 0..config::elev_num_buttons {
                     if orders[f as usize][b as usize] {
                         return true;
@@ -50,7 +63,7 @@ pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
             }
             false
         },
-        DIRN_DOWN => {
+        HALL_DOWN => {
             for f in (0..floor-1).rev() {
                 for b in 0..config::elev_num_buttons {
                     if orders[f as usize][b as usize] {
@@ -64,5 +77,11 @@ pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
     }
 }
 
-pub fn order_done(floor: u8, dir: u8, orders: Orders, delivered_order_tx: &cbc::Sender<elevio::poll::CallButton>) {
+pub fn order_done(floor: u8, direction: u8, orders: Orders, delivered_order_tx: &cbc::Sender<elevio::poll::CallButton>) {
+    if orders[floor as usize][direction as usize] {
+        delivered_order_tx.send(elevio::poll::CallButton {floor, call: direction} );
+    }
+    if orders[floor as usize][CAB as usize] {
+        delivered_order_tx.send(elevio::poll::CallButton {floor, call: CAB} );
+    }
 }
