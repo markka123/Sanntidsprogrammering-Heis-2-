@@ -46,6 +46,7 @@ fn main() -> std::io::Result<()> {
 
     
     let mut all_orders = AllOrders::init();
+  
     
   // Example orderQueue
     let mut orders = [[false,false,false],[true,false,false],[false,false,true],[false,true,true]];

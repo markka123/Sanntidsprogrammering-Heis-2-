@@ -57,14 +57,15 @@ pub fn fsm_elevator(
     loop {
         cbc::select! {
             recv(new_order_rx) -> a => {
-                let new_order = a.unwrap();
+                let new_orders = a.unwrap();
+                orders = new_orders;
                 // println!("{:#?}", new_order);
                 match state.behaviour {
                     Behaviour::Idle => {
 
-                        println!("Values: New_order = {:#?}, state.floor = {}, state.direction = {}", &new_order, state.floor, state.direction);
+                        println!("Values: New_order = {:#?}, state.floor = {}, state.direction = {}", &orders, state.floor, state.direction);
                         match () {
-                            // _ if new_order[state.floor as usize][state.direction as usize] || new_order[state.floor as usize][CAB as usize] => {
+                            // _ if orders[state.floor as usize][state.direction as usize] || orders[state.floor as usize][CAB as usize] => {
                             //     if let Err(e) = door_open_tx.send(true) {
                             //         eprintln!("Failed to send door open signal: {}", e);
                             //     }
@@ -73,17 +74,17 @@ pub fn fsm_elevator(
                                 
                             // //     // newState() // channel
                             // },
-                            // _ if new_order[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
+                            // _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
                                 
                             // },
 
-                            _ if orders::order_in_direction(&new_order, state.floor, state.direction) => {
+                            _ if orders::order_in_direction(&orders, state.floor, state.direction) => {
                                 elevator.motor_direction(state.direction);
                                 state.behaviour = Behaviour::Moving;
                                 // newState = true
                                 // handle motorstop
                             },
-                            _ if orders::order_in_direction(&new_order, state.floor, direction::direction_opposite(state.direction)) => {
+                            _ if orders::order_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(state.direction);
                                 state.behaviour = Behaviour::Moving
