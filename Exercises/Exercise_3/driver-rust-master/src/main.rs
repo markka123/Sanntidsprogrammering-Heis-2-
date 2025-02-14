@@ -47,15 +47,14 @@ fn main() -> std::io::Result<()> {
     
     let mut all_orders = AllOrders::init();
   
-  // Example orderQueue
-    let mut orders = [[false,false,false],[true,false,false],[false,false,true],[false,true,true]];
-  
     // execute_offline_order();
 
     let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
+    let (delivered_order_tx, delivered_order_rx) = cbc::unbounded::<elevio::poll::CallButton>();
+    
     {
         let elevator = elevator.clone();
-        spawn(move || elevator_controller::fsm::fsm_elevator(elevator, floor_sensor_rx, stop_button_rx, obstruction_rx, new_order_rx));
+        spawn(move || elevator_controller::fsm::fsm_elevator(&elevator, floor_sensor_rx, stop_button_rx, obstruction_rx, new_order_rx, delivered_order_tx));
     }
     
 
