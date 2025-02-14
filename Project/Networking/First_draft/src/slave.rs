@@ -3,6 +3,7 @@ use crate::message_variables::*;
 use crate::networking::*;
 use std::thread;
 use std::time::Duration;
+use std::net::UdpSocket;
 
 pub fn start_slave(my_id: &str) {
     println!("[Slave] Running with ID: {}", my_id);
@@ -60,8 +61,10 @@ fn send_order_request(my_id: String, state: State) {
 
 // Slave listens for assigned orders
 fn listen_for_orders(_my_id: String) {
+    let socket = UdpSocket::bind(format!("0.0.0.0:{}", ORDER_ASSIGNMENT_PORT))
+        .expect("Failed to bind to order assignment port");
     loop {
-        if let Some(order) = receive_message::<OrderMessage>(ORDER_ASSIGNMENT_PORT) {
+        if let Some(order) = receive_message::<OrderMessage>(&socket) {
             println!("[Slave] Received assigned order: {:?}", order);
         }
     }

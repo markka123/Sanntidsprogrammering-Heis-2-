@@ -12,7 +12,7 @@ fn main() {
     if args.len() > 1 && args[1] == "master" {
         master::start_master();
     } else {
-        let my_id = "10.100.23.20"; // Replace with actual IP
+        let my_id = "10.100.23.17"; // Replace with actual IP
         slave::start_slave(my_id);
     }
 }
