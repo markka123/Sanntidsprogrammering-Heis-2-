@@ -8,7 +8,7 @@ pub fn direction_opposite(direction: u8) -> u8 {
     }
 }
 
-pub fn motor_direction_to_hall_button(direction: u8) -> u8 {
+pub fn md_to_hall_button(direction: u8) -> u8 {
     match direction {
         DIRN_DOWN => HALL_DOWN,
         DIRN_UP => HALL_UP,

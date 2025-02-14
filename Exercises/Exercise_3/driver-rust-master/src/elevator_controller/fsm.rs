@@ -105,28 +105,54 @@ pub fn fsm_elevator(
 
             recv(floor_sensor_rx) -> a => {
                 let floor = a.unwrap();
-                elevator.floor_indicator(floor);
+                state.floor = floor;
+                elevator.floor_indicator(state.floor);
                 //motorTime.Stop()
                 motor_tx.send(()).unwrap();
                 match state.behaviour {
                     Behaviour::Moving => {
-                        if orders[state.floor as usize][state.direction as usize] || orders[state.floor as usize][CAB as usize] {
-                            elevator.motor_direction(DIRN_STOP);
-                            door_open_tx.send(true).unwrap();
-                            orders::order_done(floor, state.direction, orders, &delivered_order_tx);
-                            state.behaviour = Behaviour::DoorOpen;
-                        }
-                        else if orders[state.floor as usize][CAB as usize] && orders::order_in_direction(&orders, state.floor, state.direction) {
+                        match () {
+                            _ if (orders[state.floor as usize][state.direction as usize]) ||
+                                 (orders[state.floor as usize][CAB as usize] && orders::order_in_direction(&orders, state.floor, state.direction)) ||
+                                 (orders[state.floor as usize][CAB as usize] && !orders[state.floor as usize][direction::direction_opposite(state.direction) as usize]) => {
+                                elevator.motor_direction(DIRN_STOP);
+                                door_open_tx.send(true).unwrap();
+                                orders::order_done(floor, state.direction, orders, &delivered_order_tx);
+                                state.behaviour = Behaviour::DoorOpen;
+                            },
                             
-                        } 
+                            _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
+                                elevator.motor_direction(DIRN_STOP);
+                                door_open_tx.send(true).unwrap();
+                                state.direction = direction::direction_opposite(state.direction);
+                                orders::order_done(floor, state.direction, orders, &delivered_order_tx);
+                                state.behaviour = Behaviour::DoorOpen;
+                            },
+                        
+                            _ if orders::order_in_direction(&orders, floor, state.direction) => {
+                                // motorTimer
+                                // motor.c <- false
+                            },
+                        
+                            _ if orders::order_in_direction(&orders, floor, direction::direction_opposite(state.direction)) => {
+                                state.direction = direction::direction_opposite(state.direction);
+                                elevator.motor_direction(direction::button_to_md(state.direction));
+                                // motorTimer
+                                // motor.c <- false
+                            },
+                        
+                            _ => {
+                                elevator.motor_direction(DIRN_STOP);
+                                state.behaviour = Behaviour::Idle;
+                            }
+                        }
+                        
+
                     },
                     _ => {
                         println!("Floor indicator received while in unexpected state")
                     }
                 }
-
-
-
             },
 
             recv(motor_rx) -> _ => {
