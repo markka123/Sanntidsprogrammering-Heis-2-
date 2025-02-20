@@ -54,9 +54,24 @@ fn main() -> std::io::Result<()> {
   
     // execute_offline_order();
 
+    let (new_state_tx, new_state_rx) = cbc::unbounded::<elevator_controller::fsm::State>();
     let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
     let (delivered_order_tx, delivered_order_rx) = cbc::unbounded::<elevio::poll::CallButton>();
+    let (master_activate_tx, master_activate_rx) = cbc::unbounded::<()>();
+    let (master_deactivate_tx, master_deactivate_rx) = cbc::unbounded::<()>();
     
+    {
+        spawn(move ||network::receiver::receiver(&new_order_tx));
+    }
+
+    {
+        spawn(move ||network::transmitter::transmitter(&call_button_rx, &delivered_order_rx, &new_state_rx));
+    }
+
+    if master {
+
+    }
+
     {
         let elevator = elevator.clone();
         spawn(move || elevator_controller::fsm::fsm_elevator(&elevator, floor_sensor_rx, stop_button_rx, obstruction_rx, new_order_rx, delivered_order_tx));
@@ -72,7 +87,7 @@ fn main() -> std::io::Result<()> {
             },
             recv(delivered_order_rx) -> a => {
                 let call_button = a.unwrap();
-                all_orders.remove_order(call_button, config::elev_id as usize);
+                all_orders.remove_order(call_button, config::elev_id as usize, &new_order_tx);
             },
             // recv(stop_button_rx) -> a => {
             //     let stop = a.unwrap();

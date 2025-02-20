@@ -37,7 +37,7 @@ impl AllOrders {
         new_order_tx.send(self.orders).unwrap();
     }
 
-    pub fn remove_order(&mut self, call_button: CallButton, elevator_id: usize,) {
+    pub fn remove_order(&mut self, call_button: CallButton, elevator_id: usize, new_order_tx: &cbc::Sender<Orders>) {
         if call_button.call == CAB {
             self.cab_orders[elevator_id][call_button.floor as usize] = false;
         }
@@ -48,6 +48,7 @@ impl AllOrders {
             //Handle error
         }
         self.orders[call_button.floor as usize][call_button.call as usize] = false;
+        new_order_tx.send(self.orders).unwrap();
     }
 }
 
