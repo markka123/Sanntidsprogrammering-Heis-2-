@@ -6,7 +6,7 @@ use serde::Serialize;
 
 
 pub fn create_udp_socket() -> io::Result<UdpSocket> {
-    let bind_addr = format!("0.0.0.0:{}", udp_port); 
+    let bind_addr = format!("0.0.0.0:{}", config::udp_port); 
     let socket = UdpSocket::bind(&bind_addr).expect("Failed to bind socket");
 
     socket.set_broadcast(true)?; 
@@ -21,7 +21,7 @@ pub fn create_udp_socket() -> io::Result<UdpSocket> {
 
 pub fn broadcast_udp_message<T: Serialize>(socket: &UdpSocket, message: &T,) -> io::Result<()> {
     let serialized = serde_json::to_string(message)?;
-    let broadcast_addr = format!("{}:{}", broadcast_ip, udp_port);
+    let broadcast_addr = format!("{}:{}", config::broadcast_ip, config::udp_port);
 
     socket.send_to(serialized.as_bytes(), &broadcast_addr)?;
 
@@ -32,7 +32,7 @@ pub fn broadcast_udp_message<T: Serialize>(socket: &UdpSocket, message: &T,) -> 
 
 pub fn send_udp_message<T: Serialize>(socket: &UdpSocket, message: &T, target_ip: &str,) -> io::Result<()> {
     let serialized = serde_json::to_string(message)?;
-    let target_addr = format!("{}:{}", target_ip, udp_port);
+    let target_addr = format!("{}:{}", target_ip, config::udp_port);
 
     socket.send_to(serialized.as_bytes(), &target_addr)?;
 

@@ -5,10 +5,12 @@ use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 use driver_rust::elevator_controller;
 use driver_rust::elevator_controller::orders::{AllOrders, Orders};
+use driver_rust::network::udp;
 use driver_rust::offline_order_handler::offline_order_handler::{execute_offline_order};
 use driver_rust::config::config;
 use driver_rust::elevator_controller::lights;
 use driver_rust::distributor;
+use driver_rust::network;
 
 fn main() -> std::io::Result<()> {
     
@@ -60,21 +62,21 @@ fn main() -> std::io::Result<()> {
     let (delivered_order_tx, delivered_order_rx) = cbc::unbounded::<elevio::poll::CallButton>();
     let (master_activate_tx, master_activate_rx) = cbc::unbounded::<()>();
     let (master_deactivate_tx, master_deactivate_rx) = cbc::unbounded::<()>();
-    
+    let socket = udp::create_udp_socket().expect("Failed to create UDP socket");
     {
         spawn(move ||distributor::receiver::receiver(&new_order_tx, &master_activate_tx));
     }
 
     {
-        spawn(move ||distributor::transmitter::transmitter(&call_button_rx, &delivered_order_rx, &new_state_rx));
+        spawn(move ||distributor::transmitter::transmitter(&call_button_rx, &delivered_order_rx, &new_state_rx, socket));
     }
 
     {
-        spawn(move ||distributor::receiver::master_receiver(&master_activate_rx, &master_deactivate_tx, &master_deactivate_rx));
+        spawn(move ||distributor::receiver::master_receiver(master_activate_rx, master_deactivate_tx));
     }
 
     {
-        spawn(move ||distributor::transmitter::master_transmitter(&master_activate_rx, &master_deactivate_rx));
+        spawn(move ||distributor::transmitter::master_transmitter(master_activate_rx, master_deactivate_rx));
     }
 
     {
