@@ -1,10 +1,10 @@
-use crate::elevio::elev::{DIRN_DOWN, DIRN_STOP, DIRN_UP, HALL_DOWN, HALL_UP, CAB};
+use crate::elevio::elev::{DIRN_DOWN, DIRN_UP, HALL_DOWN, HALL_UP, CAB};
 
 pub fn direction_opposite(direction: u8) -> u8 {
     match direction {
         HALL_UP => HALL_DOWN,
         HALL_DOWN => HALL_UP,
-        _ => CAB,
+        _ => CAB, // fix error handling
     }
 }
 
