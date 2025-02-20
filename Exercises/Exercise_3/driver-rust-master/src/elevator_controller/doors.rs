@@ -1,7 +1,6 @@
 use crate::elevio::elev as e;
+use crate::config::config;
 use crossbeam_channel as cbc;
-use std::thread::*;
-use std::time::*;
 
 pub fn door(
     elevator: e::Elevator,
@@ -12,23 +11,41 @@ pub fn door(
 ) {
 
     elevator.door_light(false);
+
+    let mut is_obstructed = false;
+    let mut is_door_open = false;
+    let mut door_timer = cbc::never();
+
     loop {
-        let mut obstructed: bool = false;
         cbc::select! {
-            recv(obstruction_rx) -> a => {
-                obstructed_tx.send(a.unwrap()).unwrap();
-            },
-            recv(door_open_rx) -> a => {
+            recv(door_open_rx) -> _ => {
+                is_door_open = true;
                 elevator.door_light(true);
-                println!("opened doors");
-                sleep(Duration::from_secs(3));
-                
+                if is_obstructed {
+                    door_timer = cbc::never();
+                }
+                else {
+                    door_timer = cbc::after(config::DOOR_TIMER_DURATION);   
+                }
+            },
+            recv(obstruction_rx) -> a => {
+                let obstruction_status = a.unwrap();
+                obstructed_tx.send(obstruction_status).unwrap();
+
+                is_obstructed = obstruction_status;
+
+                if is_obstructed {
+                    door_timer = cbc::never();
+                } else if is_door_open {
+                    door_timer = cbc::after(config::DOOR_TIMER_DURATION);
+                }
+            },
+
+            recv(door_timer) -> _ => {
+                is_door_open = false;
                 elevator.door_light(false);
                 door_close_tx.send(true).unwrap();
-            },
+            }
         }
-    } 
-
-    
-
+    }
 }
