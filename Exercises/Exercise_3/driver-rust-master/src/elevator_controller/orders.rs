@@ -64,7 +64,7 @@ pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
             false
         },
         HALL_DOWN => {
-            for f in (0..floor-1).rev() {
+            for f in (0..floor).rev() {
                 for b in 0..config::elev_num_buttons {
                     if orders[f as usize][b as usize] {
                         return true;
