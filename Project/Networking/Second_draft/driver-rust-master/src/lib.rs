@@ -18,3 +18,8 @@ pub mod elevator_controller {
 pub mod config {
     pub mod config;
 }
+
+pub mod distributor {
+    pub mod receiver;
+    pub mod transmitter;
+}

@@ -8,6 +8,7 @@ use driver_rust::elevator_controller::orders::{AllOrders, Orders};
 use driver_rust::offline_order_handler::offline_order_handler::{execute_offline_order};
 use driver_rust::config::config;
 use driver_rust::elevator_controller::lights;
+use driver_rust::distributor;
 
 fn main() -> std::io::Result<()> {
     
@@ -61,15 +62,19 @@ fn main() -> std::io::Result<()> {
     let (master_deactivate_tx, master_deactivate_rx) = cbc::unbounded::<()>();
     
     {
-        spawn(move ||network::receiver::receiver(&new_order_tx));
+        spawn(move ||distributor::receiver::receiver(&new_order_tx, &master_activate_tx));
     }
 
     {
-        spawn(move ||network::transmitter::transmitter(&call_button_rx, &delivered_order_rx, &new_state_rx));
+        spawn(move ||distributor::transmitter::transmitter(&call_button_rx, &delivered_order_rx, &new_state_rx));
     }
 
-    if master {
+    {
+        spawn(move ||distributor::receiver::master_receiver(&master_activate_rx, &master_deactivate_tx, &master_deactivate_rx));
+    }
 
+    {
+        spawn(move ||distributor::transmitter::master_transmitter(&master_activate_rx, &master_deactivate_rx));
     }
 
     {
