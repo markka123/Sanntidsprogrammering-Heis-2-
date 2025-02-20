@@ -1,34 +1,46 @@
+#![allow(dead_code)]
+use crossbeam_channel as cbc;
+use crate::elevio::poll::CallButton;
+use crate::elevator_controller::fsm;
 
-fn transmitter() {
-    let state;
+
+fn transmitter(call_button_rx: &cbc::Receiver<CallButton>, delivered_order_rx: &cbc::Receiver<CallButton>, new_state_rx: &cbc::Receiver<fsm::State>) {
+    let msg_state = (); 
         loop {
-        select: 
-            recv call_btn_rx {
-                if hall {
-                    send on hall udp
-                } if cab {
-                    send on cab udp
-                }
-            },
-            recv delivered_order_rx {
-                if hall_finish {
-                    send on hall_finish udp
-                } if cab_finish {
-                    send on cab_finish udp
+            cbc::select! {
+                recv(call_button_rx) -> a => {
+                    call = a.unwrap();
+                    msg = ()
+                    send_bcast(msg);
+                },
+                recv(delivered_order_rx) -> a => {
+                    delivered = a.unwrap();
+                    msg = ()
+                    send_bcast(msg);
+                },
+                recv(new_state_rx) -> a => {
+                    let state = a.unwrap();
+                    msg_state = ();
                 }
             }
-            recv new_state_rx => a {
-                state = a.unwrap()
+
+            if(Some(msg_state)) {
+                send_bcast(msg_state);
             }
-        send state }
-    
-    thread master_transmitter(master_rx)
+             
+        }
 }
 
 
-fn master_transmitter() {
+fn master_transmitter(master_activate_rx: &cbc::Receiver<()>, master_deactivate_rx: &cbc::Receiver<()>) {
     loop {
-        select:
-            
+        master_activate_rx.recv().unwrap();
+        loop {
+            //Sende 
+
+            if let Ok(_) = master_deactivate_rx.try_recv() {
+                break;
+            }
+        }
     }
 }
