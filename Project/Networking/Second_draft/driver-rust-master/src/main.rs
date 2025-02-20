@@ -79,7 +79,7 @@ fn main() -> std::io::Result<()> {
 
     {
         let elevator = elevator.clone();
-        spawn(move || elevator_controller::fsm::fsm_elevator(&elevator, floor_sensor_rx, stop_button_rx, obstruction_rx, new_order_rx, delivered_order_tx));
+        spawn(move || elevator_controller::fsm::fsm_elevator(&elevator, floor_sensor_rx, stop_button_rx, obstruction_rx, new_order_rx, delivered_order_tx, &new_state_tx));
     }
     
 

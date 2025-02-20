@@ -22,4 +22,6 @@ pub mod config {
 pub mod distributor {
     pub mod receiver;
     pub mod transmitter;
+    pub mod master_receiver;
+    pub mod master_transmitter;
 }

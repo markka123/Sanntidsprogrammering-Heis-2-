@@ -33,7 +33,8 @@ pub fn fsm_elevator(
         stop_button_rx: cbc::Receiver<bool>, 
         obstruction_rx: cbc::Receiver<bool>,
         new_order_rx: cbc::Receiver<orders::Orders>,
-        delivered_order_tx: cbc::Sender<elevio::poll::CallButton>
+        delivered_order_tx: cbc::Sender<elevio::poll::CallButton>,
+        new_state_tx: &cbc::Sender<State>,
 ) {
 
     
@@ -44,6 +45,8 @@ pub fn fsm_elevator(
         floor: 0,
         direction: e::HALL_UP,
     };
+    new_state_tx.send(state.clone()).unwrap();
+
     let (door_open_tx, door_open_rx) = cbc::unbounded::<bool>();
     let (door_close_tx, door_close_rx) = cbc::unbounded::<bool>();
     let (obstructed_tx, obstructed_rx) = cbc::unbounded::<bool>();
@@ -194,14 +197,14 @@ pub fn fsm_elevator(
                 if state.motorstop {
                     println!("Gained motor power");
                     state.motorstop = false;
-                    //new_state
+                    new_state_tx.send(state.clone()).unwrap();
                 }
             },
             recv(obstructed_rx) -> a => {
                 let obsstructed = a.unwrap();
                 if obsstructed != state.obstructed {
                     state.obstructed = obsstructed;
-                    //new_state
+                    new_state_tx.send(state.clone()).unwrap();
                 }
             },
 
@@ -215,7 +218,7 @@ pub fn fsm_elevator(
                                 state.behaviour = Behaviour::Moving;
                                 // motorTimer
                                 // motor.c <- false
-                                // new_state
+                                new_state_tx.send(state.clone()).unwrap();
                                 println!("Case 1");
                             },
                             _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
@@ -231,14 +234,14 @@ pub fn fsm_elevator(
                                 state.behaviour = Behaviour::Moving;
                                 // motorTimer
                                 // motor.c <- false
-                                // new_state
+                                new_state_tx.send(state.clone()).unwrap();
                                 println!("Case 3");
                             },
                             _ => {
                                 state.behaviour = Behaviour::Idle;
                                 println!("Case 4");
 
-                                // new_state
+                                new_state_tx.send(state.clone()).unwrap();
                             }
                         }
 
