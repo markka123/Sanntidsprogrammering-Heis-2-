@@ -2,37 +2,52 @@
 use crossbeam_channel as cbc;
 use crate::elevio::poll::CallButton;
 use crate::elevator_controller::fsm;
+use std::net::UdpSocket;
+use crate::network::udp;
 
 
-fn transmitter(call_button_rx: &cbc::Receiver<CallButton>, delivered_order_rx: &cbc::Receiver<CallButton>, new_state_rx: &cbc::Receiver<fsm::State>) {
-    let msg_state = (); 
+pub fn transmitter(call_button_rx: &cbc::Receiver<CallButton>, delivered_order_rx: &cbc::Receiver<CallButton>, new_state_rx: &cbc::Receiver<fsm::State>, socket: UdpSocket) {
+        // let mut bcast_state = false;
+        // let mut state_init: fsm::State =  fsm::State{
+        //     obstructed: false,
+        //     motorstop: false,
+        //     behaviour: fsm::Behaviour::Idle,
+        //     floor: 0,
+        //     direction: 0,
+        // };
+        // let mut msg_state = state_init;
         loop {
             cbc::select! {
                 recv(call_button_rx) -> a => {
-                    call = a.unwrap();
-                    msg = ()
-                    send_bcast(msg);
+                    let call = a.unwrap();
+                    let msg_call = [0, call.floor, call.call];
+                    udp::broadcast_udp_message(&socket, &msg_call);
                 },
+
                 recv(delivered_order_rx) -> a => {
-                    delivered = a.unwrap();
-                    msg = ()
-                    send_bcast(msg);
+                    let delivered = a.unwrap();
+                    let msg_delivered = [1, delivered.floor, delivered.call];
+                    udp::broadcast_udp_message(&socket, &msg_delivered);
                 },
-                recv(new_state_rx) -> a => {
-                    let state = a.unwrap();
-                    msg_state = ();
-                }
+                // recv(new_state_rx) -> a => {
+                //     let state = a.unwrap();
+                //     msg_state = state;
+                //     bcast_state = true;
+                // }
             }
 
-            if(Some(msg_state)) {
-                send_bcast(msg_state);
-            }
+            // if(bcast_state) {
+            //     let msg_state_bytes = bincode::serialize(&msg_state).unwrap();
+            //     udp::broadcast_udp_message(socket, &msg_state_bytes);
+            // }
+            
+            
              
         }
 }
 
 
-fn master_transmitter(master_activate_rx: &cbc::Receiver<()>, master_deactivate_rx: &cbc::Receiver<()>) {
+pub fn master_transmitter(master_activate_rx: cbc::Receiver<()>, master_deactivate_rx: cbc::Receiver<()>) {
     loop {
         master_activate_rx.recv().unwrap();
         loop {
