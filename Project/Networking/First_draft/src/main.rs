@@ -7,12 +7,12 @@ mod slave;
 use std::env;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().collect();      //Collects command-line arguments
 
     if args.len() > 1 && args[1] == "master" {
         master::start_master();
     } else {
-        let my_id = "10.100.23.20"; // Replace with actual IP
+        let my_id = "10.100.23.20";
         slave::start_slave(my_id);
     }
 }
