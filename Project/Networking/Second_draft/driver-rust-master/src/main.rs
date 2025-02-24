@@ -11,6 +11,7 @@ use driver_rust::config::config;
 use driver_rust::elevator_controller::lights;
 use driver_rust::distributor;
 use driver_rust::network;
+use std::sync::Arc;
 
 fn main() -> std::io::Result<()> {
     
@@ -57,28 +58,34 @@ fn main() -> std::io::Result<()> {
   
     // execute_offline_order();
 
-    let (new_state_tx, new_state_rx) = cbc::unbounded::<elevator_controller::fsm::State>();
-    let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
-    let (delivered_order_tx, delivered_order_rx) = cbc::unbounded::<elevio::poll::CallButton>();
-    let (master_activate_tx, master_activate_rx) = cbc::unbounded::<()>();
-    let (master_deactivate_tx, master_deactivate_rx) = cbc::unbounded::<()>();
+
+
+
+
     let socket = udp::create_udp_socket().expect("Failed to create UDP socket");
-    {
-        spawn(move ||distributor::receiver::receiver(&new_order_tx, &master_activate_tx));
-    }
+    let socket_receiver = Arc::clone(&socket);
+    let socket_transmitter = Arc::clone(&socket);
 
+    let (master_activate_transmitter_tx, master_activate_transmitter_rx) = cbc::unbounded::<()>();
+    let (master_activate_receiver_tx, master_activate_receiver_rx) = cbc::unbounded::<()>();
+    let (master_deactivate_tx, master_deactivate_rx) = cbc::unbounded::<()>();
+    let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
+    let (new_order_2_tx, new_order_2_rx) = cbc::unbounded::<Orders>();
+    let (delivered_order_tx, delivered_order_rx) = cbc::unbounded::<elevio::poll::CallButton>();
+    let (new_state_tx, new_state_rx) = cbc::unbounded::<elevator_controller::fsm::State>();
+    
     {
-        spawn(move ||distributor::transmitter::transmitter(&call_button_rx, &delivered_order_rx, &new_state_rx, socket));
+        spawn(move ||distributor::receiver::receiver(new_order_2_tx, master_activate_transmitter_tx, master_activate_receiver_tx, socket_receiver));
     }
-
     {
-        spawn(move ||distributor::receiver::master_receiver(master_activate_rx, master_deactivate_tx));
+        spawn(move ||distributor::transmitter::transmitter(call_button_rx, delivered_order_rx, new_state_rx, socket_transmitter));
     }
-
     {
-        spawn(move ||distributor::transmitter::master_transmitter(master_activate_rx, master_deactivate_rx));
+        spawn(move ||distributor::receiver::master_receiver(master_activate_receiver_rx, master_deactivate_tx));
     }
-
+    {
+        spawn(move ||distributor::transmitter::master_transmitter(master_activate_transmitter_rx, master_deactivate_rx));
+    }
     {
         let elevator = elevator.clone();
         spawn(move || elevator_controller::fsm::fsm_elevator(&elevator, floor_sensor_rx, stop_button_rx, obstruction_rx, new_order_rx, delivered_order_tx, &new_state_tx));
@@ -87,29 +94,18 @@ fn main() -> std::io::Result<()> {
 
     loop {
         lights::set_lights(&all_orders, elevator.clone());
-        cbc::select! {
-            recv(call_button_rx) -> a => {
-                let call_button = a.unwrap();
-                all_orders.add_order(call_button.clone(), config::elev_id as usize, &new_order_tx);
-            },
-            recv(delivered_order_rx) -> a => {
-                let call_button = a.unwrap();
-                all_orders.remove_order(call_button, config::elev_id as usize, &new_order_tx);
-            },
-            // recv(stop_button_rx) -> a => {
-            //     let stop = a.unwrap();
-            //     println!("Stop button: {:#?}", stop);
-            //     for f in 0..config::elev_num_floors {
-            //         for c in 0..3 {
-            //             elevator.call_button_light(f, c, false);
-            //         }
-            //     }
-            // },
-            // recv(obstruction_rx) -> a => {
-            //     let obstr = a.unwrap();
-            //     println!("Obstruction: {:#?}", obstr);
-            //     elevator.motor_direction(if obstr { e::DIRN_STOP } else { dirn });
-            // },
-        }
+        // cbc::select! {
+        //     recv(call_button_rx) -> a => {
+        //         let call_button = a.unwrap();
+        //         all_orders.add_order(call_button.clone(), config::elev_id as usize, &new_order_tx);
+        //         //new_order_tx.send(call_button).unwrap();
+        //         button_call_tx.send(call_button).unwrap();
+
+        //     },
+        //     recv(delivered_order_rx) -> a => {
+        //         let call_button = a.unwrap();
+        //         all_orders.remove_order(call_button, config::elev_id as usize, &new_order_tx);
+        //     }
+        // }
     }
 }

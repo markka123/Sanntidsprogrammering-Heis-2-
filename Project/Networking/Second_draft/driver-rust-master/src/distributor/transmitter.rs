@@ -4,9 +4,10 @@ use crate::elevio::poll::CallButton;
 use crate::elevator_controller::fsm;
 use std::net::UdpSocket;
 use crate::network::udp;
+use std::sync::Arc;
 
 
-pub fn transmitter(call_button_rx: &cbc::Receiver<CallButton>, delivered_order_rx: &cbc::Receiver<CallButton>, new_state_rx: &cbc::Receiver<fsm::State>, socket: UdpSocket) {
+pub fn transmitter(new_order_2_rx: cbc::Receiver<CallButton>, delivered_order_rx: cbc::Receiver<CallButton>, new_state_rx: cbc::Receiver<fsm::State>, socket: Arc<UdpSocket>) {
         // let mut bcast_state = false;
         // let mut state_init: fsm::State =  fsm::State{
         //     obstructed: false,
@@ -18,9 +19,10 @@ pub fn transmitter(call_button_rx: &cbc::Receiver<CallButton>, delivered_order_r
         // let mut msg_state = state_init;
         loop {
             cbc::select! {
-                recv(call_button_rx) -> a => {
+                recv(new_order_2_rx) -> a => {
                     let call = a.unwrap();
-                    let msg_call = [0, call.floor, call.call];
+                    // let msg_call = [0, call.floor, call.call];
+                    let msg_call = "Hello World";
                     udp::broadcast_udp_message(&socket, &msg_call);
                 },
 
@@ -47,9 +49,9 @@ pub fn transmitter(call_button_rx: &cbc::Receiver<CallButton>, delivered_order_r
 }
 
 
-pub fn master_transmitter(master_activate_rx: cbc::Receiver<()>, master_deactivate_rx: cbc::Receiver<()>) {
+pub fn master_transmitter(master_activate_transmitter_rx: cbc::Receiver<()>, master_deactivate_rx: cbc::Receiver<()>) {
     loop {
-        master_activate_rx.recv().unwrap();
+        master_activate_transmitter_rx.recv().unwrap();
         loop {
             //Sende 
 

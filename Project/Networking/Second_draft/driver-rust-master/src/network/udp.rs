@@ -3,6 +3,7 @@ use std::io;
 use crate::config::config;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use std::sync::Arc;
 
 
 /// Creates and configures a UDP socket for sending and receiving messages.
@@ -19,9 +20,9 @@ use serde::de::DeserializeOwned;
 /// ## Errors:
 /// - Panics if binding to the port fails (`expect("Failed to bind socket")`).
 /// ```
-pub fn create_udp_socket() -> io::Result<UdpSocket> {
+pub fn create_udp_socket() -> io::Result<Arc<UdpSocket>> {
     let bind_addr = format!("0.0.0.0:{}", config::udp_port); 
-    let socket = UdpSocket::bind(&bind_addr).expect("Failed to bind socket");
+    let socket = Arc::new(UdpSocket::bind(&bind_addr).expect("Failed to bind socket"));
 
     socket.set_broadcast(true)?; 
     socket.set_nonblocking(true)?;
@@ -33,7 +34,7 @@ pub fn create_udp_socket() -> io::Result<UdpSocket> {
 
 
 
-pub fn broadcast_udp_message<T: Serialize>(socket: &UdpSocket, message: &T,) -> io::Result<()> {
+pub fn broadcast_udp_message<T: Serialize>(socket: &Arc<UdpSocket>, message: &T,) -> io::Result<()> {
     let serialized = serde_json::to_string(message)?;
     let broadcast_addr = format!("{}:{}", config::broadcast_ip, config::udp_port);
 
@@ -44,7 +45,7 @@ pub fn broadcast_udp_message<T: Serialize>(socket: &UdpSocket, message: &T,) -> 
 
 
 
-pub fn send_udp_message<T: Serialize>(socket: &UdpSocket, message: &T, target_ip: &str,) -> io::Result<()> {
+pub fn send_udp_message<T: Serialize>(socket: &Arc<UdpSocket>, message: &T, target_ip: &str,) -> io::Result<()> {
     let serialized = serde_json::to_string(message)?;
     let target_addr = format!("{}:{}", target_ip, config::udp_port);
 
@@ -56,13 +57,13 @@ pub fn send_udp_message<T: Serialize>(socket: &UdpSocket, message: &T, target_ip
 
 
 
-pub fn receive_udp_message<T: DeserializeOwned>(socket: &UdpSocket,) -> Option<(T, String)> {
+pub fn receive_udp_message<T: DeserializeOwned>(socket: &Arc<UdpSocket>) -> Option<(T, String)> {
     let mut buf = [0; 1024];
 
     match socket.recv_from(&mut buf) {
         Ok((size, sender_addr)) => {
             if let Ok(message) = serde_json::from_slice::<T>(&buf[..size]) {
-                return Some((message));
+                return Some((message, sender_addr.to_string()));
             } else {
                 println!("[UDP] Failed to deserialize message from {}", sender_addr);
             }
