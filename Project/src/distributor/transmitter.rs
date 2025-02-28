@@ -59,9 +59,8 @@ pub fn transmitter(
 
 pub fn broadcast_order(socket: &Arc<UdpSocket>, call: CallButton, msg_type: u8, master_ip: &str) {
     let msg = Message::Call([msg_type, call.floor, call.call]);
-    let _ = udp::send_udp_message(&socket, &msg, &master_ip);
+    let _ = udp::broadcast_udp_message(&socket, &msg);
 }
-
 pub fn broadcast_state(socket: &Arc<UdpSocket>, state: &Message, master_ip: &str) {
     let _ = udp::send_udp_message(&socket, &state, &master_ip);
 }
