@@ -16,15 +16,10 @@ fn main() -> std::io::Result<()> {
     let elevator = e::Elevator::init("localhost:15657", config::ELEV_NUM_FLOORS)?;
     println!("Elevator started:\n{:#?}", elevator);
 
-    let (call_button_tx, call_button_rx) = cbc::unbounded::<elevio::poll::CallButton>();
-    {
-        let elevator = elevator.clone();
-        spawn(move || elevio::poll::call_buttons(elevator, call_button_tx, config::POLL_PERIOD));
-    }
-
     let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
-    let (delivered_order_tx, delivered_order_rx) = cbc::unbounded::<elevio::poll::CallButton>();
     let (emergency_reset_tx, emergency_reset_rx) = cbc::unbounded::<bool>();
+    let (new_state_tx, new_state_rx) = cbc::unbounded::<elevator_controller::elevator_fsm::State>();
+    let (order_completed_tx, order_completed_rx) = cbc::unbounded::<elevio::poll::CallButton>();
 
     {
         let elevator = elevator.clone();
@@ -32,8 +27,21 @@ fn main() -> std::io::Result<()> {
             elevator_controller::elevator_fsm::elevator_fsm(
                 &elevator,
                 new_order_rx,
-                delivered_order_tx,
+                order_completed_tx,
                 emergency_reset_tx,
+                &new_state_tx,
+            )
+        });
+    }
+
+    {
+        let elevator = elevator.clone();
+        spawn(move || {
+            distributor::distributor::distributor(
+                &elevator,
+                new_state_rx,
+                order_completed_rx,
+                new_order_tx,
             )
         });
     }
@@ -43,19 +51,19 @@ fn main() -> std::io::Result<()> {
     loop {
         lights::set_lights(&all_orders, elevator.clone());
 
-        cbc::select! {
-            recv(call_button_rx) -> a => {
-                let call_button = a.unwrap();
-                all_orders.add_order(call_button, config::ELEV_ID as usize, &new_order_tx);
-            },
-            recv(delivered_order_rx) -> a => {
-                let call_button = a.unwrap();
-                all_orders.remove_order(call_button, config::ELEV_ID as usize, &new_order_tx);
-            },
-            recv(emergency_reset_rx) -> _ => {
-                all_orders = AllOrders::init();
-                new_order_tx.send(all_orders.orders).unwrap();
-            }
-        }
+        // cbc::select! {
+        //     recv(call_button_rx) -> a => {
+        //         let call_button = a.unwrap();
+        //         all_orders.add_order(call_button, config::ELEV_ID as usize, &new_order_tx);
+        //     },
+        //     recv(order_completed_rx) -> a => {
+        //         let call_button = a.unwrap();
+        //         all_orders.remove_order(call_button, config::ELEV_ID as usize, &new_order_tx);
+        //     },
+        //     recv(emergency_reset_rx) -> _ => {
+        //         all_orders = AllOrders::init();
+        //         new_order_tx.send(all_orders.orders).unwrap();
+        //     }
+        // }
     }
 }

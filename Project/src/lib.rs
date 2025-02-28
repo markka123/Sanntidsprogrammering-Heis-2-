@@ -20,6 +20,7 @@ pub mod config {
 }
 
 pub mod distributor {
+    pub mod distributor;
     pub mod receiver;
     pub mod transmitter;
 }

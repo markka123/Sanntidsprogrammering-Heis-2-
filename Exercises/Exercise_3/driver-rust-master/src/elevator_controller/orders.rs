@@ -78,11 +78,11 @@ pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
     }
 }
 
-pub fn order_done(floor: u8, direction: u8, orders: Orders, delivered_order_tx: &cbc::Sender<CallButton>) {
+pub fn order_done(floor: u8, direction: u8, orders: Orders, order_completed_tx: &cbc::Sender<CallButton>) {
     if orders[floor as usize][direction as usize] {
-        let _ = delivered_order_tx.send(CallButton {floor, call: direction} );
+        let _ = order_completed_tx.send(CallButton {floor, call: direction} );
     }
     if orders[floor as usize][CAB as usize] {
-        let _ = delivered_order_tx.send(CallButton {floor, call: CAB} );
+        let _ = order_completed_tx.send(CallButton {floor, call: CAB} );
     }
 }

@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 use crate::config::config;
+use crate::distributor::distributor::{COMPLETED_ORDER, NEW_ORDER};
+use crate::elevator_controller::elevator_fsm::State;
 use crate::elevio::poll::CallButton;
 use crate::network::udp;
 use crossbeam_channel as cbc;
@@ -7,44 +9,43 @@ use std::net::UdpSocket;
 use std::sync::Arc;
 
 pub fn transmitter(
-    new_state_rx: cbc::Receiver<CallButton>,
-    order_finished_rx: cbc::Receiver<CallButton>,
+    call_button_rx: cbc::Receiver<CallButton>,
+    new_state_rx: cbc::Receiver<State>,
+    order_completed_rx: cbc::Receiver<CallButton>,
     master_activate_rx: cbc::Receiver<()>,
     socket: Arc<UdpSocket>,
+    master_ip: &str,
 ) {
-    let state = ""; //PLACEHOLDER: Replace with a state type
+    let state: &str = "NOT dead"; //PLACEHOLDER: Replace with a state type
     let state_ticker = cbc::tick(config::STATE_TRANSMIT_PERIOD);
 
     let is_master = false;
 
     loop {
-        // cbc::select! {
-        //     recv(new_state_rx) -> a => {
-        //         let new_state = a.unwrap();
-        //         state = call;
-        //     },
-        //     recv(order_finished_rx) -> a => {
-        //         let call = a.unwrap();
-        //         type = "Completed";
-        //         broadcast_order(call, type);
-        //     },
-        //     recv(call_button_rx) -> a => {
-        //         let call = a.unwrap();
-        //         type = "New_order";
-        //         broadcast_order(call, type);
-        //     },
-        //     recv(state_ticker) -> _ => {
-        //         broadcast_state(state);
-        //     },
-        //     recv(master_activate_rx) -> _ => {
-        //         is_master = true;
-        //     }
-        // }
-
-        // if(bcast_state) {
-        //     let msg_state_bytes = bincode::serialize(&msg_state).unwrap();
-        //     udp::broadcast_udp_message(socket, &msg_state_bytes);
-        // }
+        cbc::select! {
+            // recv(new_state_rx) -> a => {
+            //     let new_state = a.unwrap();
+            //     state = call;
+            // },
+            recv(order_completed_rx) -> a => {
+                let call = a.unwrap();
+                let msg_type = COMPLETED_ORDER;
+                broadcast_order(&socket, call, msg_type, &master_ip);
+            },
+            recv(call_button_rx) -> a => {
+                let call = a.unwrap();
+                let msg_type = NEW_ORDER;
+                broadcast_order(&socket, call, msg_type, &master_ip);
+                println!("Sendt message!");
+            },
+            recv(state_ticker) -> _ => {
+                println!("Broadcasting state: {}", state);
+                broadcast_state(&socket, state, &master_ip);
+            },
+            // recv(master_activate_rx) -> _ => {
+            //     is_master = true;
+            // }
+        }
     }
 }
 
@@ -53,3 +54,12 @@ pub fn transmitter(
 
 // let msg_delivered = [1, delivered.floor, delivered.call];
 // udp::broadcast_udp_message(&socket, &msg_delivered);
+
+pub fn broadcast_order(socket: &Arc<UdpSocket>, call: CallButton, msg_type: u8, master_ip: &str) {
+    let msg: [u8; 3] = [msg_type, call.floor, call.call];
+    udp::send_udp_message(&socket, &msg, &master_ip);
+}
+
+pub fn broadcast_state(socket: &Arc<UdpSocket>, state: &str, master_ip: &str) {
+    udp::send_udp_message(&socket, &state, &master_ip);
+}
