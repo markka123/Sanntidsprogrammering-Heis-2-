@@ -18,33 +18,28 @@ Semaphore:
 */
 class Resource(T) {
     private {
-        T               value;
-        Semaphore       mtx;
-        Semaphore[2]    sems;
-        int[2]          numWaiting;
-        bool            busy;
+        T value;
+        Semaphore mtx;
+        Semaphore[2] sems;
+        int[2] numWaiting;
+        bool busy;
     }
-    
-    this(){
+
+    this() {
         mtx = new Semaphore(1);
-        sems[0] = new Semaphore(0);
-        sems[1] = new Semaphore(0);
+        foreach (i; 0 .. sems.length) {
+            sems[i] = new Semaphore(0);
+        }
     }
 
     T allocate(int priority) {
-        int index = priority % 2; // Even index = high priority, Odd index = low priority
-
-        mtx.wait(); // Lock access
-
-    
+        mtx.wait();
         if (busy) {
-            numWaiting[index]++;
+            numWaiting[priority]++;
             mtx.notify();
-            sems[index].wait(); // Wait for resource
-            mtx.wait();
-            numWaiting[index]--;
+            sems[priority].wait();
+            numWaiting[priority]--;
         }
-
         busy = true;
         mtx.notify();
         return value;
@@ -55,19 +50,15 @@ class Resource(T) {
         value = v;
         busy = false;
 
-        // Prioritize high-priority users
-        if (numWaiting[0] > 0) {
-            sems[0].notify();
-        } else if (numWaiting[1] > 0) {
+        if (numWaiting[1] > 0) {
             sems[1].notify();
+        } else if (numWaiting[0] > 0) {
+            sems[0].notify();
         } else {
             mtx.notify();
         }
     }
 }
-
-
-
 
 
 void main(){
