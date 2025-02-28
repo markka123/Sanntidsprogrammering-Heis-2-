@@ -33,6 +33,8 @@ pub fn elevator_fsm(
         obstruction_rx: cbc::Receiver<bool>,
         new_order_rx: cbc::Receiver<orders::Orders>,
         delivered_order_tx: cbc::Sender<elevio::poll::CallButton>,
+        new_state_tx: &cbc::Sender<State>,
+        delivered_order_tx: cbc::Sender<elevio::poll::CallButton>,
         emergency_reset_tx: cbc::Sender<bool>
 ) {
     let mut state = State {
@@ -203,6 +205,21 @@ pub fn elevator_fsm(
                 }
             },
 
+            recv(motor_rx) -> _ => {
+                if state.motorstop {
+                    println!("Gained motor power");
+                    state.motorstop = false;
+                    new_state_tx.send(state.clone()).unwrap();
+                }
+            },
+            recv(obstructed_rx) -> a => {
+                let obsstructed = a.unwrap();
+                if obsstructed != state.obstructed {
+                    state.obstructed = obsstructed;
+                    new_state_tx.send(state.clone()).unwrap();
+                }
+            },
+
             recv(door_close_rx) -> _ => {
                 println!("Closing doors");
                 match state.behaviour {
@@ -211,6 +228,10 @@ pub fn elevator_fsm(
                             _ if orders::order_in_direction(&orders, state.floor, state.direction) => {
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 state.behaviour = Behaviour::Moving;
+                                // motorTimer
+                                // motor.c <- false
+                                new_state_tx.send(state.clone()).unwrap();
+                                println!("Case 1");
                                 motor_timer = cbc::never();
                                 // new_state
                             },
@@ -224,11 +245,18 @@ pub fn elevator_fsm(
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 state.behaviour = Behaviour::Moving;
+                                // motorTimer
+                                // motor.c <- false
+                                new_state_tx.send(state.clone()).unwrap();
+                                println!("Case 3");
                                 motor_timer = cbc::never();
                                 // new_state
                             },
                             _ => {
                                 state.behaviour = Behaviour::Idle;
+                                println!("Case 4");
+
+                                new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::never();
                                 // new_state
                             }

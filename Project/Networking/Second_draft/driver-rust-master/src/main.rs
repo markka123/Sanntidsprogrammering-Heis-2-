@@ -4,8 +4,13 @@ use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 use driver_rust::elevator_controller;
 use driver_rust::elevator_controller::orders::{AllOrders, Orders};
+use driver_rust::network::udp;
+use driver_rust::offline_order_handler::offline_order_handler::{execute_offline_order};
 use driver_rust::config::config;
 use driver_rust::elevator_controller::lights;
+use driver_rust::distributor;
+use driver_rust::network;
+use std::sync::Arc;
 
 fn main() -> std::io::Result<()> {
     
@@ -34,9 +39,16 @@ fn main() -> std::io::Result<()> {
     {
         let elevator = elevator.clone();
         spawn(move || elevio::poll::obstruction(elevator, obstruction_tx, config::POLL_PERIOD));
+    }config::POLL_PERIOD));
+
+
+    let mut dirn = e::DIRN_UP;
+    if elevator.floor_sensor().is_none() {
+        elevator.motor_direction(dirn);
     }
 
     let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
+    let (new_order_2_tx, new_order_2_rx) = cbc::unbounded::<Orders>();
     let (delivered_order_tx, delivered_order_rx) = cbc::unbounded::<elevio::poll::CallButton>();
     let (emergency_reset_tx, emergency_reset_rx) = cbc::unbounded::<bool>();
     
