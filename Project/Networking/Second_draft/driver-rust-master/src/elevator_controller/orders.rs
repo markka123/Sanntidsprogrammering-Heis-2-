@@ -1,12 +1,11 @@
 #![allow(dead_code)]
 use crossbeam_channel as cbc;
-use crate::elevio::{self, elev as e};
-use crate::elevio::elev::{HALL_UP, HALL_DOWN, CAB, DIRN_DOWN, DIRN_STOP, DIRN_UP};
+use crate::elevio::elev::{HALL_UP, HALL_DOWN, CAB};
 use crate::elevio::poll::{CallButton};
 use crate::config::config;
 
 
-pub type Orders = [[bool; 3]; config::elev_num_floors as usize];
+pub type Orders = [[bool; 3]; config::ELEV_NUM_FLOORS as usize];
 
 #[derive(Clone, Debug)]
 pub struct AllOrders {
@@ -18,9 +17,9 @@ pub struct AllOrders {
 
 impl AllOrders {
     pub fn init() -> Self {
-        let hall_orders = vec![[false; 2]; config::elev_num_floors as usize];
-        let cab_orders = vec![vec![false; config::elev_num_floors as usize]; config::elev_num_elevators as usize];
-        let orders = [[false; 3]; config::elev_num_floors as usize];
+        let hall_orders = vec![[false; 2]; config::ELEV_NUM_FLOORS as usize];
+        let cab_orders = vec![vec![false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
+        let orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
         Self { hall_orders,  cab_orders, orders}
     }
     pub fn add_order(&mut self, call_button: CallButton, elevator_id: usize, new_order_tx: &cbc::Sender<Orders>) {
@@ -33,11 +32,12 @@ impl AllOrders {
         else {
             //Handle error
         }
+        println!("Btn: {:#?}", call_button);
         self.orders[call_button.floor as usize][call_button.call as usize] = true;
         new_order_tx.send(self.orders).unwrap();
     }
 
-    pub fn remove_order(&mut self, call_button: CallButton, elevator_id: usize,) {
+    pub fn remove_order(&mut self, call_button: CallButton, elevator_id: usize, new_order_tx: &cbc::Sender<Orders>) {
         if call_button.call == CAB {
             self.cab_orders[elevator_id][call_button.floor as usize] = false;
         }
@@ -48,14 +48,15 @@ impl AllOrders {
             //Handle error
         }
         self.orders[call_button.floor as usize][call_button.call as usize] = false;
+        new_order_tx.send(self.orders).unwrap();
     }
 }
 
 pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
     match dir {
         HALL_UP => {
-            for f in (floor+1)..config::elev_num_floors {
-                for b in 0..config::elev_num_buttons {
+            for f in (floor+1)..config::ELEV_NUM_FLOORS {
+                for b in 0..config::ELEV_NUM_BUTTONS {
                     if orders[f as usize][b as usize] {
                         return true;
                     }
@@ -65,7 +66,7 @@ pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
         },
         HALL_DOWN => {
             for f in (0..floor).rev() {
-                for b in 0..config::elev_num_buttons {
+                for b in 0..config::ELEV_NUM_BUTTONS {
                     if orders[f as usize][b as usize] {
                         return true;
                     }
@@ -77,11 +78,11 @@ pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
     }
 }
 
-pub fn order_done(floor: u8, direction: u8, orders: Orders, delivered_order_tx: &cbc::Sender<elevio::poll::CallButton>) {
+pub fn order_done(floor: u8, direction: u8, orders: Orders, delivered_order_tx: &cbc::Sender<CallButton>) {
     if orders[floor as usize][direction as usize] {
-        delivered_order_tx.send(elevio::poll::CallButton {floor, call: direction} );
+        let _ = delivered_order_tx.send(CallButton {floor, call: direction} );
     }
     if orders[floor as usize][CAB as usize] {
-        delivered_order_tx.send(elevio::poll::CallButton {floor, call: CAB} );
+        let _ = delivered_order_tx.send(CallButton {floor, call: CAB} );
     }
 }
