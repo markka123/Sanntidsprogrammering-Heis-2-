@@ -1,41 +1,41 @@
 #![allow(dead_code)]
 use crossbeam_channel as cbc;
-use crate::elevio::poll::CallButton;
-use crate::elevator_controller::fsm;
 use std::net::UdpSocket;
-use crate::network::udp;
 use std::sync::Arc;
+use crate::network::udp;
+use crate::config::config;
+use crate::elevio::poll::CallButton;
 
 
-pub fn transmitter(new_order_2_rx: cbc::Receiver<CallButton>, delivered_order_rx: cbc::Receiver<CallButton>, new_state_rx: cbc::Receiver<fsm::State>, socket: Arc<UdpSocket>) {
-        // let mut bcast_state = false;
-        // let mut state_init: fsm::State =  fsm::State{
-        //     obstructed: false,
-        //     motorstop: false,
-        //     behaviour: fsm::Behaviour::Idle,
-        //     floor: 0,
-        //     direction: 0,
-        // };
-        // let mut msg_state = state_init;
+pub fn transmitter(new_state_rx: cbc::Receiver<CallButton>, order_finished_rx: cbc::Receiver<CallButton>, master_activate_rx: cbc::Receiver<>, socket: Arc<UdpSocket>) {
+        
+        let state = ""; //PLACEHOLDER: Replace with a state type
+        let state_ticker = cbc::tic(config::STATE_TRANSMIT_PERIOD);
+        
+        let is_master = false;
+
         loop {
             cbc::select! {
-                recv(new_order_2_rx) -> a => {
+                recv(new_state_rx) -> a => {
+                    let new_state = a.unwrap();
+                    state = call;
+                },
+                recv(order_finished_rx) -> a => {
                     let call = a.unwrap();
-                    // let msg_call = [0, call.floor, call.call];
-                    let msg_call = "Hello World";
-                    udp::broadcast_udp_message(&socket, &msg_call);
+                    type = "Completed";
+                    broadcast_order(call, type);
                 },
-
-                recv(delivered_order_rx) -> a => {
-                    let delivered = a.unwrap();
-                    let msg_delivered = [1, delivered.floor, delivered.call];
-                    udp::broadcast_udp_message(&socket, &msg_delivered);
+                recv(call_button_rx) -> a => {
+                    let call = a.unwrap();
+                    type = "New_order";
+                    broadcast_order(call, type);
                 },
-                // recv(new_state_rx) -> a => {
-                //     let state = a.unwrap();
-                //     msg_state = state;
-                //     bcast_state = true;
-                // }
+                recv(state_ticker) -> _ => {
+                    broadcast_state(state);
+                },
+                recv(master_activate_rx) -> _ => {
+                    is_master = true;
+                }
             }
 
             // if(bcast_state) {
@@ -49,15 +49,10 @@ pub fn transmitter(new_order_2_rx: cbc::Receiver<CallButton>, delivered_order_rx
 }
 
 
-pub fn master_transmitter(master_activate_transmitter_rx: cbc::Receiver<()>, master_deactivate_rx: cbc::Receiver<()>) {
-    loop {
-        master_activate_transmitter_rx.recv().unwrap();
-        loop {
-            //Sende 
 
-            if let Ok(_) = master_deactivate_rx.try_recv() {
-                break;
-            }
-        }
-    }
-}
+let msg_call = "Hello World";
+udp::broadcast_udp_message(&socket, &msg_call);
+
+
+let msg_delivered = [1, delivered.floor, delivered.call];
+udp::broadcast_udp_message(&socket, &msg_delivered);

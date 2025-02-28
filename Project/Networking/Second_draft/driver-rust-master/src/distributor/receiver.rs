@@ -21,8 +21,3 @@ pub fn receiver(new_order_tx: cbc::Sender<orders::Orders>, master_activate_trans
       
         }
 }
-
-pub fn master_receiver(master_activate_receiver_rx: cbc::Receiver<()>, master_deactivate_tx: cbc::Sender<()>) {
-    
-}
-
