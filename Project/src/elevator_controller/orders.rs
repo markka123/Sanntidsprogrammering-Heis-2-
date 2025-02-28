@@ -28,12 +28,7 @@ impl AllOrders {
             orders,
         }
     }
-    pub fn add_order(
-        &mut self,
-        call_button: CallButton,
-        elevator_id: usize,
-        new_order_tx: &cbc::Sender<Orders>,
-    ) {
+    pub fn add_order(&mut self, call_button: CallButton, elevator_id: usize) {
         if call_button.call == CAB {
             self.cab_orders[elevator_id][call_button.floor as usize] = true;
         } else if call_button.call == HALL_DOWN || call_button.call == HALL_UP {
@@ -43,15 +38,9 @@ impl AllOrders {
         }
         println!("Btn: {:#?}", call_button);
         self.orders[call_button.floor as usize][call_button.call as usize] = true;
-        new_order_tx.send(self.orders).unwrap();
     }
 
-    pub fn remove_order(
-        &mut self,
-        call_button: CallButton,
-        elevator_id: usize,
-        new_order_tx: &cbc::Sender<Orders>,
-    ) {
+    pub fn remove_order(&mut self, call_button: CallButton, elevator_id: usize) {
         if call_button.call == CAB {
             self.cab_orders[elevator_id][call_button.floor as usize] = false;
         } else if call_button.call == HALL_DOWN || call_button.call == HALL_UP {
@@ -60,7 +49,6 @@ impl AllOrders {
             //Handle error
         }
         self.orders[call_button.floor as usize][call_button.call as usize] = false;
-        new_order_tx.send(self.orders).unwrap();
     }
 }
 

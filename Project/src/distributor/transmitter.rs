@@ -8,6 +8,8 @@ use crossbeam_channel as cbc;
 use std::net::UdpSocket;
 use std::sync::Arc;
 
+use super::receiver::Message;
+
 pub fn transmitter(
     call_button_rx: cbc::Receiver<CallButton>,
     new_state_rx: cbc::Receiver<State>,
@@ -16,7 +18,7 @@ pub fn transmitter(
     socket: Arc<UdpSocket>,
     master_ip: &str,
 ) {
-    let state: &str = "NOT dead"; //PLACEHOLDER: Replace with a state type
+    let state = Message::State(String::from("hey")); //PLACEHOLDER: Replace with a state type
     let state_ticker = cbc::tick(config::STATE_TRANSMIT_PERIOD);
 
     let is_master = false;
@@ -36,11 +38,11 @@ pub fn transmitter(
                 let call = a.unwrap();
                 let msg_type = NEW_ORDER;
                 broadcast_order(&socket, call, msg_type, &master_ip);
-                println!("Sendt message!");
+                // println!("Sendt message!");
             },
             recv(state_ticker) -> _ => {
-                println!("Broadcasting state: {}", state);
-                broadcast_state(&socket, state, &master_ip);
+                // println!("Broadcasting state: {:?}", state);
+                broadcast_state(&socket, &state, &master_ip);
             },
             // recv(master_activate_rx) -> _ => {
             //     is_master = true;
@@ -56,10 +58,10 @@ pub fn transmitter(
 // udp::broadcast_udp_message(&socket, &msg_delivered);
 
 pub fn broadcast_order(socket: &Arc<UdpSocket>, call: CallButton, msg_type: u8, master_ip: &str) {
-    let msg: [u8; 3] = [msg_type, call.floor, call.call];
-    udp::send_udp_message(&socket, &msg, &master_ip);
+    let msg = Message::Call([msg_type, call.floor, call.call]);
+    let _ = udp::send_udp_message(&socket, &msg, &master_ip);
 }
 
-pub fn broadcast_state(socket: &Arc<UdpSocket>, state: &str, master_ip: &str) {
-    udp::send_udp_message(&socket, &state, &master_ip);
+pub fn broadcast_state(socket: &Arc<UdpSocket>, state: &Message, master_ip: &str) {
+    let _ = udp::send_udp_message(&socket, &state, &master_ip);
 }

@@ -3,8 +3,8 @@ pub mod elevio {
     pub mod poll;
 }
 
-pub mod offline_order_handler {
-    pub mod offline_order_handler;
+pub mod cost_function {
+    pub mod cost_function;
 }
 
 pub mod elevator_controller {

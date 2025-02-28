@@ -8,7 +8,6 @@ use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 use driver_rust::network;
 use driver_rust::network::udp;
-use driver_rust::offline_order_handler::offline_order_handler::execute_offline_order;
 use std::sync::Arc;
 use std::thread::*;
 
@@ -46,20 +45,18 @@ fn main() -> std::io::Result<()> {
         });
     }
 
-    let mut all_orders = AllOrders::init();
+    // let mut all_orders = AllOrders::init();
 
     loop {
-        lights::set_lights(&all_orders, elevator.clone());
-
         // cbc::select! {
-        //     recv(call_button_rx) -> a => {
-        //         let call_button = a.unwrap();
-        //         all_orders.add_order(call_button, config::ELEV_ID as usize, &new_order_tx);
-        //     },
-        //     recv(order_completed_rx) -> a => {
-        //         let call_button = a.unwrap();
-        //         all_orders.remove_order(call_button, config::ELEV_ID as usize, &new_order_tx);
-        //     },
+        // recv(call_button_rx) -> a => {
+        //     let call_button = a.unwrap();
+        //     all_orders.add_order(call_button, config::ELEV_ID as usize, &new_order_tx);
+        // },
+        // recv(order_completed_rx) -> a => {
+        //     let call_button = a.unwrap();
+        //     all_orders.remove_order(call_button, config::ELEV_ID as usize, &new_order_tx);
+        // },
         //     recv(emergency_reset_rx) -> _ => {
         //         all_orders = AllOrders::init();
         //         new_order_tx.send(all_orders.orders).unwrap();
