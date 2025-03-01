@@ -31,12 +31,11 @@ pub fn distributor(
     let socket = udp::create_udp_socket().expect("Failed to create UDP socket");
     let socket_receiver = Arc::clone(&socket);
     let socket_transmitter = Arc::clone(&socket);
-    let (order_msg_tx, order_msg_rx) = cbc::unbounded::<[u8; 3]>();
-
-    let (master_activate_tx, master_activate_rx) = cbc::unbounded::<()>();
-
+    
     let master_ip = config::BROADCAST_IP;
 
+    let (order_msg_tx, order_msg_rx) = cbc::unbounded::<[u8; 3]>();
+    let (master_activate_tx, master_activate_rx) = cbc::unbounded::<()>();
     let (call_button_tx, call_button_rx) = cbc::unbounded::<CallButton>();
 
     {
@@ -45,7 +44,11 @@ pub fn distributor(
     }
 
     {
-        spawn(move || receiver::receiver(order_msg_tx, master_activate_tx, socket_receiver));
+        spawn(move || receiver::receiver(
+            order_msg_tx,
+            master_activate_tx, 
+            socket_receiver
+        ));
     }
     {
         spawn(move || {

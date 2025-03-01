@@ -4,17 +4,25 @@ use serde::Serialize;
 use std::io;
 use std::net::UdpSocket;
 use std::sync::Arc;
+use socket2::{Socket, Domain, Type, Protocol};
+
 
 pub fn create_udp_socket() -> io::Result<Arc<UdpSocket>> {
     let bind_addr = format!("0.0.0.0:{}", config::UDP_PORT);
-    let socket = Arc::new(UdpSocket::bind(&bind_addr).expect("Failed to bind socket"));
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
+    
+    socket.set_reuse_address(true)?;
+    use std::net::SocketAddr;
+    socket.bind(&bind_addr.parse::<SocketAddr>().unwrap().into())?;
+    
 
+    let socket = Arc::new(UdpSocket::from(socket));
     socket.set_broadcast(true)?;
     socket.set_nonblocking(true)?;
 
-    //println!("[UDP] Socket created on {}", bind_addr);
     Ok(socket)
 }
+
 
 pub fn broadcast_udp_message<T: Serialize>(socket: &Arc<UdpSocket>, message: &T) -> io::Result<()> {
     let serialized = serde_json::to_string(message)?;

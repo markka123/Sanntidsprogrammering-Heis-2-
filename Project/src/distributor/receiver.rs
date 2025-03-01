@@ -7,8 +7,10 @@ use crate::network::udp;
 use crate::network::udp::*;
 use crossbeam_channel as cbc;
 use serde::{Deserialize, Serialize};
+use crate::elevator_controller::elevator_fsm::{State, Behaviour};
 use std::net::UdpSocket;
 use std::sync::Arc;
+use serde_json;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Message {
@@ -28,8 +30,15 @@ pub fn receiver(
             if let Ok(message) = serde_json::from_value::<Message>(received_message) {
                 match message {
                     Message::Call(order_msg) => order_msg_tx.send(order_msg).unwrap(),
-                    Message::State(state) => {
-                        // println!("Received state: {} from {}", state, sender_addr);
+                    Message::State(state_json) => {
+                        match serde_json::from_str::<State>(&state_json) { // Need to find out how the state of all elevators should be stored and how to infer an elevators ID - the task description states that id should be passed as a commad line argument
+                            Ok(state) => {
+                                println!("Received state: {:?} from {}", state, sender_addr);
+                            }
+                            Err(e) => {
+                                println!("Failed to deserialize state: {:?} from {}", e, sender_addr);
+                            }
+                        }
                     }
                 }
             } else {
