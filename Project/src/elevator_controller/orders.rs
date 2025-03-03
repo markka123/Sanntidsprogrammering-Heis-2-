@@ -8,7 +8,7 @@ pub type Orders = [[bool; 3]; config::ELEV_NUM_FLOORS as usize];
 pub type HallOrders = [[bool; 2]; config::ELEV_NUM_FLOORS as usize];
 pub type CabOrders = [[bool; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct AllOrders {
     // Init with: let matrix = Matrix::new(rows, cols, false);
     pub hall_orders: HallOrders,

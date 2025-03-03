@@ -2,6 +2,8 @@
 use crate::config::config;
 use crate::distributor::receiver;
 use crate::distributor::transmitter;
+use crate::elevator_controller::direction;
+use crate::elevator_controller::elevator_fsm;
 use crate::elevator_controller::elevator_fsm::State;
 use crate::elevator_controller::lights;
 use crate::elevator_controller::orders;
@@ -16,11 +18,15 @@ use std::array;
 use std::sync::Arc;
 use std::thread::*;
 use std::time::*;
+use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 
 use crate::distributor::receiver::Message;
 
 pub const NEW_ORDER: u8 = 0;
 pub const COMPLETED_ORDER: u8 = 1;
+pub type States = [elevator_fsm::State; config::ELEV_NUM_ELEVATORS as usize];
+
 
 pub fn distributor(
     elevator: &e::Elevator,
@@ -32,7 +38,8 @@ pub fn distributor(
     let socket_receiver = Arc::clone(&socket);
     let socket_transmitter = Arc::clone(&socket);
     
-    let master_ip = config::BROADCAST_IP;
+    let master_ip = config::BROADCAST_IP;    
+    let states:States = create_states();
 
     let (order_msg_tx, order_msg_rx) = cbc::unbounded::<[u8; 3]>();
     let (master_activate_tx, master_activate_rx) = cbc::unbounded::<()>();
@@ -94,4 +101,16 @@ pub fn distributor(
             // },
         }
     }
+}
+
+
+pub fn create_states() -> States {
+    std::array::from_fn(|_| elevator_fsm::State {
+        obstructed: false,
+        motorstop: true,
+        emergency_stop: false,
+        behaviour: elevator_fsm::Behaviour::Idle,
+        floor: 0,
+        direction: e::HALL_DOWN,
+    })
 }
