@@ -7,6 +7,7 @@
 //     "states" : 
 //         {
 //             "id_1" : {
+                    
 //                 "behaviour"     : < "idle" | "moving" | "doorOpen" >
 //                 "floor"         : NonNegativeInteger
 //                 "direction"     : < "up" | "down" | "stop" >
@@ -40,7 +41,7 @@ pub fn assign_requests(
             "direction": elevator[2],
             "cabRequests": cab_requests[i],
         });
-        let result = assign_requests(elevator_variables, cab_requests, hall_requests);
+    
         let word = Num2Words::new(i as u32 + 1)
             .to_words()
             .unwrap_or_else(|_| (i + 1).to_string()); // Handle errors safely
@@ -57,7 +58,7 @@ pub fn assign_requests(
     println!("JSON Input:\n{}", json_input_string);
 
     // Path to the executable
-    let executable_path = "src/offline_order_handler/executables/hall_request_assigner.exe";
+    let executable_path = "src/cost_function/executables/hall_request_assigner";
 
     // Call the executable using command-line arguments
     let output = Command::new(executable_path)

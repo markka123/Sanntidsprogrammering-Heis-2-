@@ -17,13 +17,21 @@ use std::sync::Arc;
 use std::thread::*;
 use std::time::*;
 
-use crate::distributor::receiver::Message;
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[serde(tag = "type", content = "data")]
+pub enum Message {
+    CallMsg([u8; 3]),
+    StateMsg((u8, State)),
+    // AssignedOrders([Orders; config::ELEV_NUM_ELEVATORS as usize]),
+    // HallOrders()
+}
 
 pub const NEW_ORDER: u8 = 0;
 pub const COMPLETED_ORDER: u8 = 1;
 
 pub fn distributor(
     elevator: &e::Elevator,
+    elevator_id: u8,
     new_state_rx: cbc::Receiver<State>,
     order_completed_rx: cbc::Receiver<CallButton>,
     new_order_tx: cbc::Sender<orders::Orders>,
@@ -34,7 +42,7 @@ pub fn distributor(
     
     let master_ip = config::BROADCAST_IP;
 
-    let (order_msg_tx, order_msg_rx) = cbc::unbounded::<[u8; 3]>();
+    let (message_tx, message_rx) = cbc::unbounded::<Message>();
     let (master_activate_tx, master_activate_rx) = cbc::unbounded::<()>();
     let (call_button_tx, call_button_rx) = cbc::unbounded::<CallButton>();
 
@@ -45,7 +53,7 @@ pub fn distributor(
 
     {
         spawn(move || receiver::receiver(
-            order_msg_tx,
+            message_tx,
             master_activate_tx, 
             socket_receiver
         ));
@@ -53,10 +61,10 @@ pub fn distributor(
     {
         spawn(move || {
             transmitter::transmitter(
+                elevator_id,
                 call_button_rx,
                 new_state_rx,
                 order_completed_rx,
-                master_activate_rx,
                 socket_transmitter,
                 &master_ip,
             )
@@ -64,34 +72,52 @@ pub fn distributor(
     }
 
     let mut all_orders = AllOrders::init();
+    let mut master_ticker = cbc::never();
 
     loop {
         lights::set_lights(&all_orders, elevator.clone());
         // sleep(Duration::from_millis(100));
         select! {
-            recv(order_msg_rx) -> a => {
-                let msg_array = a.unwrap();
-                let msg_type = msg_array[0];
-                let new_order = CallButton{
-                    floor: msg_array[1],
-                    call: msg_array[2],
-                };
-                match msg_type {
-                    NEW_ORDER => {
-                        all_orders.add_order(new_order, config::ELEV_ID as usize);
+            recv(message_rx) -> message => {
+                match message {
+                    Ok(Message::CallMsg(msg_array)) => {
+                        let msg_type = msg_array[0];
+                        let new_order = CallButton{
+                            floor: msg_array[1],
+                            call: msg_array[2],
+                        };
+                        match msg_type {
+                            NEW_ORDER => {
+                                all_orders.add_order(new_order, config::ELEV_ID as usize);
+                            },
+                            COMPLETED_ORDER => {
+                                all_orders.remove_order(new_order, config::ELEV_ID as usize);
+                            },
+                            _ => {
+                                //Handle error
+                            }
+                        }
+                        new_order_tx.send(all_orders.orders).unwrap();
                     },
-                    COMPLETED_ORDER => {
-                        all_orders.remove_order(new_order, config::ELEV_ID as usize);
+                    Ok(Message::StateMsg(state_msg)) => {
+                        let (id, state) = state_msg;
+                        // states[id] = state;
+                        println!("Id: {}", id);
+                        println!{"{:#?}", state}; 
                     },
-                    _ => {
-                        //Handle error
+                    Err(e) => {
+                        println!("Received message of unexpected format");
+                        println!("{:#?}", e);
                     }
                 }
-                new_order_tx.send(all_orders.orders).unwrap();
             },
-            // recv(master_activate_rx) -> _ => {
-            //     println!("Master activated");
-            // },
+            recv(master_activate_rx) -> _ => {
+                master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
+            },
+            recv(master_ticker) -> _ => {
+                // call cost func
+                // bcast results
+            }
         }
     }
 }

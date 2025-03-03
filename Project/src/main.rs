@@ -22,9 +22,10 @@ fn main() -> std::io::Result<()> {
     // let result = assign_requests(&elevator_variables, &cab_requests, &hall_requests);
     // println!("Result from executable:\n{}", result);
     
-    println!("{}", 1.to_string());
+    // println!("{}", 1.to_string());
 
     let args: Vec<String> = env::args().collect();
+    let elevator_id = 0;
 
     let default_port = 15657;
     let port: u16 = if args.len() > 1 {
@@ -39,7 +40,6 @@ fn main() -> std::io::Result<()> {
         default_port
     };
     let addr = format!("localhost:{}", port);
-
 
     let elevator = e::Elevator::init(&addr, config::ELEV_NUM_FLOORS)?;
     println!("Elevator started:\n{:#?}", elevator);
@@ -67,6 +67,7 @@ fn main() -> std::io::Result<()> {
         spawn(move || {
             distributor::distributor::distributor(
                 &elevator,
+                elevator_id,
                 new_state_rx,
                 order_completed_rx,
                 new_order_tx,
