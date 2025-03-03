@@ -31,7 +31,7 @@ pub fn transmitter(
 
     let state_ticker = cbc::tick(config::STATE_TRANSMIT_PERIOD);
 
-    let is_master = false;
+    let master_ticker = cbc::never();
 
     loop {
         cbc::select! {
@@ -49,14 +49,13 @@ pub fn transmitter(
                 let call = a.unwrap();
                 let msg_type = NEW_ORDER;
                 broadcast_order(&socket, call, msg_type, &master_ip);
-                // println!("Sendt message!");
             },
             recv(state_ticker) -> _ => {
                 broadcast_state(&socket, &state, &master_ip);
             },
-            // recv(master_activate_rx) -> _ => {
-            //     is_master = true;
-            // }
+            recv(master_activate_rx) -> _ => {
+                master_ticker = cbc::ticker(config::MASTER_TRANSMIT_PERIOD);
+            }
         }
     }
 }
