@@ -76,9 +76,9 @@ fn assign_requests(
 //MAIN
 
 pub fn main() {
-    let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
-    let cab_requests = vec![vec![false, false, true, true]];
-    let hall_requests = vec![vec![false, false], vec![true, false], vec![false, false], vec![false, true]];
+    let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "stop".to_string()], vec!["moving".to_string(), "3".to_string(), "down".to_string()]];
+    let cab_requests = vec![vec![false, false, false, false], vec![false, false, false, false]];
+    let hall_requests = vec![vec![true, false], vec![true, false], vec![false, true], vec![false, false]];
 
 
     let result = assign_requests(elevator_variables, cab_requests, hall_requests);
