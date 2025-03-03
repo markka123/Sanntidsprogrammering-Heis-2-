@@ -3,6 +3,7 @@ use crate::distributor::distributor::{COMPLETED_ORDER, NEW_ORDER};
 use crate::elevator_controller::orders;
 use crate::elevator_controller::orders::{AllOrders, Orders};
 use crate::elevio::poll::CallButton;
+use crate::config::config;
 use crate::network::udp;
 use crate::network::udp::*;
 use crossbeam_channel as cbc;
@@ -16,8 +17,8 @@ use serde_json;
 pub enum Message {
     Call([u8; 3]),
     State(String),
-    AssignedOrders([Orders; config::ELEV_NUM_ELEVATORS]),
-    HallOrders()
+    // AssignedOrders([Orders; config::ELEV_NUM_ELEVATORS as usize]),
+    // HallOrders()
 }
 
 pub fn receiver(

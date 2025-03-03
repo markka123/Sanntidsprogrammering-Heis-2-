@@ -25,10 +25,10 @@ use serde_json::{json};
 use num2words::Num2Words;
 
 //ASSIGN_REQUESTS
-fn assign_requests(
-    elevator_variables: Vec<Vec<String>>,
-    cab_requests: Vec<Vec<bool>>,
-    hall_requests: Vec<Vec<bool>>,
+pub fn assign_requests(
+    elevator_variables: &Vec<Vec<String>>,
+    cab_requests: &Vec<Vec<bool>>,
+    hall_requests: &Vec<Vec<bool>>,
 ) -> String {
 
     let mut states = serde_json::Map::new();
@@ -40,7 +40,7 @@ fn assign_requests(
             "direction": elevator[2],
             "cabRequests": cab_requests[i],
         });
-    
+        let result = assign_requests(elevator_variables, cab_requests, hall_requests);
         let word = Num2Words::new(i as u32 + 1)
             .to_words()
             .unwrap_or_else(|_| (i + 1).to_string()); // Handle errors safely
@@ -81,8 +81,6 @@ pub fn execute_offline_order() {
     let hall_requests = vec![vec![false, false], vec![true, false], vec![false, false], vec![false, true]];
 
 
-    let result = assign_requests(elevator_variables, cab_requests, hall_requests);
+    let result = assign_requests(&elevator_variables, &cab_requests, &hall_requests);
     println!("Result from executable:\n{}", result);
-
-
 }

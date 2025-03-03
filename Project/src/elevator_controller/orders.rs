@@ -5,8 +5,8 @@ use crate::elevio::poll::CallButton;
 use crossbeam_channel as cbc;
 
 pub type Orders = [[bool; 3]; config::ELEV_NUM_FLOORS as usize];
-pub type HallOrders = [[bool; 2]; config::ELEV_NUM_ELEVATORS];
-pub type CabOrders = [[bool; config::ELEV_NUM_FLOORS]; config::ELEV_NUM_ELEVATORS];
+pub type HallOrders = [[bool; 2]; config::ELEV_NUM_FLOORS as usize];
+pub type CabOrders = [[bool; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
 
 #[derive(Clone, Debug)]
 pub struct AllOrders {
@@ -18,11 +18,8 @@ pub struct AllOrders {
 
 impl AllOrders {
     pub fn init() -> Self {
-        let hall_orders = vec![[false; 2]; config::ELEV_NUM_FLOORS as usize];
-        let cab_orders = vec![
-            vec![false; config::ELEV_NUM_FLOORS as usize];
-            config::ELEV_NUM_ELEVATORS as usize
-        ];
+        let hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
+        let cab_orders = [[false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
         let orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
         Self {
             hall_orders,

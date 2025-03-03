@@ -4,6 +4,7 @@ use driver_rust::distributor;
 use driver_rust::elevator_controller;
 use driver_rust::elevator_controller::lights;
 use driver_rust::elevator_controller::orders::{AllOrders, Orders};
+use driver_rust::cost_function::cost_function::{assign_requests};
 use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 use driver_rust::network;
@@ -13,6 +14,15 @@ use std::thread::*;
 use std::env;
 
 fn main() -> std::io::Result<()> {
+    // let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
+    // let cab_requests = vec![vec![false, false, true, true]];
+    // let hall_requests = vec![vec![false, false], vec![true, false], vec![false, false], vec![false, true]];
+
+
+    // let result = assign_requests(&elevator_variables, &cab_requests, &hall_requests);
+    // println!("Result from executable:\n{}", result);
+    
+    println!("{}", 1.to_string());
 
     let args: Vec<String> = env::args().collect();
 
@@ -64,7 +74,7 @@ fn main() -> std::io::Result<()> {
         });
     }
 
-    // let mut all_orders = AllOrders::init();
+    let mut all_orders = AllOrders::init();
 
     loop {
         // cbc::select! {
@@ -82,4 +92,5 @@ fn main() -> std::io::Result<()> {
         //     }
         // }
     }
+    Ok(())
 }

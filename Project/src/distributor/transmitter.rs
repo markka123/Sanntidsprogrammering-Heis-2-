@@ -31,7 +31,7 @@ pub fn transmitter(
 
     let state_ticker = cbc::tick(config::STATE_TRANSMIT_PERIOD);
 
-    let master_ticker = cbc::never();
+    let mut master_ticker = cbc::never();
 
     loop {
         cbc::select! {
@@ -54,7 +54,14 @@ pub fn transmitter(
                 broadcast_state(&socket, &state, &master_ip);
             },
             recv(master_activate_rx) -> _ => {
-                master_ticker = cbc::ticker(config::MASTER_TRANSMIT_PERIOD);
+                master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
+            },
+            // recv(master_deactivate_rx) -> _ => {
+            //     master_ticker = cbc::never();
+            // },
+            recv(master_ticker) -> _ => {
+                // call cost func
+                // bcast results
             }
         }
     }
