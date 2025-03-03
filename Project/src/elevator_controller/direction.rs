@@ -15,3 +15,11 @@ pub fn call_to_md(direction: u8) -> u8 {
         _ => CAB, //fix error handling
     }
 }
+
+pub fn direction_to_string(direction: u8) -> String {
+    match direction {
+        HALL_DOWN => "down".to_string(),
+        HALL_UP => "up".to_string(),
+        _ => "stop".to_string(), //fix
+    }
+}

@@ -4,7 +4,7 @@ use driver_rust::distributor;
 use driver_rust::elevator_controller;
 use driver_rust::elevator_controller::lights;
 use driver_rust::elevator_controller::orders::{AllOrders, Orders};
-use driver_rust::cost_function::cost_function::{assign_requests};
+use driver_rust::cost_function::cost_function::{assign_orders};
 use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 use driver_rust::network;

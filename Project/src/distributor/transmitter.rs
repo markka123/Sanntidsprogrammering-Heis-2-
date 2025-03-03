@@ -16,8 +16,8 @@ pub fn transmitter(
     call_button_rx: cbc::Receiver<CallButton>,
     new_state_rx: cbc::Receiver<State>,
     order_completed_rx: cbc::Receiver<CallButton>,
+    master_transmit_rx: cbc::Receiver<Message>,
     socket: Arc<UdpSocket>,
-    master_ip: &str,
 ) {
     let mut state = State {
         obstructed: false,
@@ -35,24 +35,27 @@ pub fn transmitter(
             recv(new_state_rx) -> a => {
                 let new_state = a.unwrap();
                 state = new_state;
-                println!("State updated!");
+                //println!("State updated!");
             },
             recv(order_completed_rx) -> a => {
                 let call = a.unwrap();
                 let msg_type = COMPLETED_ORDER;
-                let msg = Message::CallMsg([msg_type, call.floor, call.call]);
+                let msg = Message::CallMsg((elevator_id, [msg_type, call.floor, call.call]));
                 broadcast_message(&socket, &msg);
             },
             recv(call_button_rx) -> a => {
                 let call = a.unwrap();
                 let msg_type = NEW_ORDER;
-                let msg = Message::CallMsg([msg_type, call.floor, call.call]);
+                let msg = Message::CallMsg((elevator_id, [msg_type, call.floor, call.call]));
                 broadcast_message(&socket, &msg);
             },
             recv(state_ticker) -> _ => {
                 let msg = Message::StateMsg((elevator_id, state.clone()));
                 broadcast_message(&socket, &msg);
             },
+            recv(master_transmit_rx) -> assigned_orders_msg => {
+                broadcast_message(&socket, &assigned_orders_msg.unwrap());
+            }
         }
     }
 }
