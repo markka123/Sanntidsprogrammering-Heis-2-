@@ -60,17 +60,6 @@ pub fn transmitter(
     }
 }
 
-// let msg_call = "Hello World";
-// udp::broadcast_udp_message(&socket, &msg_call);
-
-// let msg_delivered = [1, delivered.floor, delivered.call];
-// udp::broadcast_udp_message(&socket, &msg_delivered);
-
-// pub fn broadcast_order(socket: &Arc<UdpSocket>, call: CallButton, msg_type) {
-//     let msg = Message::Call([msg_type, call.floor, call.call]);
-//     let _ = udp::broadcast_udp_message(&socket, &msg);
-// }
-
 pub fn broadcast_message(socket: &Arc<UdpSocket>, message: &Message) {
     let message_json = serde_json::to_string(message).unwrap();
     let _ = udp::broadcast_udp_message(&socket, &message_json);

@@ -29,7 +29,7 @@ use std::collections::HashMap;
 pub enum Message {
     CallMsg((u8, [u8; 3])),
     StateMsg((u8, State)),
-    AssignedOrdersMsg(String),
+    AllAssignedOrdersMsg(String),
     // AssignedOrders([Orders; config::ELEV_NUM_ELEVATORS as usize]),
     // HallOrders()
 }
@@ -113,18 +113,14 @@ pub fn distributor(
                     Ok(Message::StateMsg(state_msg)) => {
                         let (id, state) = state_msg;
                         states[id as usize] = state;
-                        // states[id] = state;
-                        // println!("Id: {}", id);
-                        // println!{"{:#?}", state};
                     },
-                    Ok(Message::AssignedOrdersMsg(assigned_orders_str)) => {
-                        //println!("Assigned orders: {:#?}", assigned_orders_str);
-                        let assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_str(&assigned_orders_str).unwrap();
+                    Ok(Message::AllAssignedOrdersMsg(all_assigned_orders_str)) => {
+                        let all_assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_str(&all_assigned_orders_str).unwrap();
                        
-                        if let Some(assigned_order) = assigned_orders_map.get(&elevator_id) {
+                        if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
                             // println!("Assigned orders: {:#?}", assigned_order);
                             // all_orders.assigned_orders = assigned_orders;
-                            new_order_tx.send(*assigned_order).unwrap();
+                            new_order_tx.send(*assigned_orders).unwrap();
                         } else {
                             println!("ID 0 not found!");
                         }
@@ -141,7 +137,7 @@ pub fn distributor(
             },
             recv(master_ticker) -> _ => {
                 let assigned_orders_str = cost_function::assign_orders(&states, &all_orders.cab_orders, &all_orders.hall_orders);
-                let assigned_orders_msg = Message::AssignedOrdersMsg(assigned_orders_str);
+                let assigned_orders_msg = Message::AllAssignedOrdersMsg(assigned_orders_str);
                 master_transmit_tx.send(assigned_orders_msg).unwrap();
                 //println!("Assigned orders: {:#?}", assigned_orders);
             }
