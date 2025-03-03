@@ -5,12 +5,14 @@ use crate::elevio::poll::CallButton;
 use crossbeam_channel as cbc;
 
 pub type Orders = [[bool; 3]; config::ELEV_NUM_FLOORS as usize];
+pub type HallOrders = [[bool; 2]; config::ELEV_NUM_ELEVATORS];
+pub type CabOrders = [[bool; config::ELEV_NUM_FLOORS]; config::ELEV_NUM_ELEVATORS];
 
 #[derive(Clone, Debug)]
 pub struct AllOrders {
     // Init with: let matrix = Matrix::new(rows, cols, false);
-    pub hall_orders: Vec<[bool; 2]>,
-    pub cab_orders: Vec<Vec<bool>>,
+    pub hall_orders: HallOrders,
+    pub cab_orders: CabOrders,
     pub orders: Orders,
 }
 

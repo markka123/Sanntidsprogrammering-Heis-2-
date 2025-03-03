@@ -16,6 +16,8 @@ use serde_json;
 pub enum Message {
     Call([u8; 3]),
     State(String),
+    AssignedOrders([Orders; config::ELEV_NUM_ELEVATORS]),
+    HallOrders()
 }
 
 pub fn receiver(
