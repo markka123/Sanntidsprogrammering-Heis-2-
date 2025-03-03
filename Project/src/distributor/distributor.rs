@@ -120,15 +120,16 @@ pub fn distributor(
                     Ok(Message::AssignedOrdersMsg(assigned_orders_str)) => {
                         //println!("Assigned orders: {:#?}", assigned_orders_str);
                         let assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_str(&assigned_orders_str).unwrap();
-                       
-                        if let Some(assigned_order) = assigned_orders_map.get(&elevator_id) {
-                            // println!("Assigned orders: {:#?}", assigned_order);
-                            // all_orders.assigned_orders = assigned_orders;
-                            new_order_tx.send(*assigned_order).unwrap();
-                        } else {
-                            println!("ID 0 not found!");
+                        if !(states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed) {
+                            if let Some(assigned_order) = assigned_orders_map.get(&elevator_id) {
+                                // println!("Assigned orders: {:#?}", assigned_order);
+                                // all_orders.assigned_orders = assigned_orders;
+                                new_order_tx.send(*assigned_order).unwrap();
+                            } else {
+                                println!("ID not found!");
+                            }
                         }
-                        
+                            
                     },
                     Err(e) => {
                         println!("Received message of unexpected format");
