@@ -14,31 +14,11 @@ use std::thread::*;
 use std::env;
 
 fn main() -> std::io::Result<()> {
-    // let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
-    // let cab_requests = vec![vec![false, false, true, true]];
-    // let hall_requests = vec![vec![false, false], vec![true, false], vec![false, false], vec![false, true]];
-
-
-    // let result = assign_requests(&elevator_variables, &cab_requests, &hall_requests);
-    // println!("Result from executable:\n{}", result);
     
-    // println!("{}", 1.to_string());
+    let (port, elevator_id) = fetch_command_line_args();
 
-    let args: Vec<String> = env::args().collect();
-    let elevator_id = 0;
+    println!("{}, {}", port, elevator_id);
 
-    let default_port = 15657;
-    let port: u16 = if args.len() > 1 {
-        match args[1].parse() {
-            Ok(p) => p,
-            Err(_) => {
-                eprintln!("Warning: Invalid port provided. Using default: {}", default_port);
-                default_port
-            }
-        }
-    } else {
-        default_port
-    };
     let addr = format!("localhost:{}", port);
 
     let elevator = e::Elevator::init(&addr, config::ELEV_NUM_FLOORS)?;
@@ -75,17 +55,17 @@ fn main() -> std::io::Result<()> {
         });
     }
 
-    let mut all_orders = AllOrders::init();
+    // let mut all_orders = AllOrders::init();
 
     loop {
         // cbc::select! {
         // recv(call_button_rx) -> a => {
         //     let call_button = a.unwrap();
-        //     all_orders.add_order(call_button, config::ELEV_ID as usize, &new_order_tx);
+        //     all_orders.add_order(call_button, config::elevator_id as usize, &new_order_tx);
         // },
         // recv(order_completed_rx) -> a => {
         //     let call_button = a.unwrap();
-        //     all_orders.remove_order(call_button, config::ELEV_ID as usize, &new_order_tx);
+        //     all_orders.remove_order(call_button, config::elevator_id as usize, &new_order_tx);
         // },
         //     recv(emergency_reset_rx) -> _ => {
         //         all_orders = AllOrders::init();
@@ -94,4 +74,40 @@ fn main() -> std::io::Result<()> {
         // }
     }
     Ok(())
+}
+
+
+
+pub fn fetch_command_line_args() -> (u16, u8) {
+
+    let default_port = 15657;
+    let default_elevator_id = 0;
+
+    let command_line_args: Vec<String> = env::args().collect();
+
+    let port = if command_line_args.len() > 1 {
+        match command_line_args[1].parse::<u16>() {
+            Ok(p) => p,
+            Err(_) => {
+                eprintln!("Warning: Invalid port provided. Using default: {}", default_port);
+                default_port
+            }
+        }
+    } else {
+        default_port
+    };
+
+    let elevator_id = if command_line_args.len() > 2 {
+        match command_line_args[2].parse::<u8>() {
+            Ok(id) => id,
+            Err(_) => {
+                eprintln!("Warning: Invalid elevator ID provided. Using default: {}", default_elevator_id);
+                default_elevator_id
+            }
+        }
+    } else {
+        default_elevator_id
+    };
+
+    (port, elevator_id)
 }
