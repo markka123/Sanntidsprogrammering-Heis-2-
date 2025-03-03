@@ -12,6 +12,8 @@ use crate::elevio::elev as e;
 use crate::elevio::poll;
 use crate::elevio::poll::CallButton;
 use crate::network::udp;
+use crate::cost_function::cost_function;
+
 use crossbeam_channel as cbc;
 use crossbeam_channel::select;
 use std::array;
@@ -19,12 +21,15 @@ use std::sync::Arc;
 use std::thread::*;
 use std::time::*;
 use serde::{Serialize, Deserialize};
+use serde_json::Value;
+use std::collections::HashMap;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
 pub enum Message {
-    CallMsg([u8; 3]),
+    CallMsg((u8, [u8; 3])),
     StateMsg((u8, State)),
+    AssignedOrdersMsg(String),
     // AssignedOrders([Orders; config::ELEV_NUM_ELEVATORS as usize]),
     // HallOrders()
 }
@@ -44,11 +49,10 @@ pub fn distributor(
     let socket = udp::create_udp_socket().expect("Failed to create UDP socket");
     let socket_receiver = Arc::clone(&socket);
     let socket_transmitter = Arc::clone(&socket);
-    
-    let master_ip = config::BROADCAST_IP;    
-    let states:States = create_states();
+    let mut states:States = create_states();
 
     let (message_tx, message_rx) = cbc::unbounded::<Message>();
+    let (master_transmit_tx, master_transmit_rx) = cbc::unbounded::<Message>();
     let (master_activate_tx, master_activate_rx) = cbc::unbounded::<()>();
     let (call_button_tx, call_button_rx) = cbc::unbounded::<CallButton>();
 
@@ -71,22 +75,23 @@ pub fn distributor(
                 call_button_rx,
                 new_state_rx,
                 order_completed_rx,
+                master_transmit_rx,
                 socket_transmitter,
-                &master_ip,
             )
         });
     }
 
     let mut all_orders = AllOrders::init();
-    let mut master_ticker = cbc::never();
+    let mut master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
 
     loop {
-        lights::set_lights(&all_orders, elevator.clone());
+        lights::set_lights(&all_orders, elevator.clone(), elevator_id);
         // sleep(Duration::from_millis(100));
         select! {
             recv(message_rx) -> message => {
                 match message {
-                    Ok(Message::CallMsg(msg_array)) => {
+                    Ok(Message::CallMsg(call_msg)) => {
+                        let (id, msg_array) = call_msg;
                         let msg_type = msg_array[0];
                         let new_order = CallButton{
                             floor: msg_array[1],
@@ -94,22 +99,36 @@ pub fn distributor(
                         };
                         match msg_type {
                             NEW_ORDER => {
-                                all_orders.add_order(new_order, config::ELEV_ID as usize);
+                                all_orders.add_order(new_order, id as usize);
                             },
                             COMPLETED_ORDER => {
-                                all_orders.remove_order(new_order, config::ELEV_ID as usize);
+                                all_orders.remove_order(new_order, id as usize);
                             },
                             _ => {
                                 //Handle error
                             }
                         }
-                        new_order_tx.send(all_orders.orders).unwrap();
+                        // new_order_tx.send(all_orders.assigned_orders[elevator_id]).unwrap();
                     },
                     Ok(Message::StateMsg(state_msg)) => {
                         let (id, state) = state_msg;
+                        states[id as usize] = state;
                         // states[id] = state;
-                        println!("Id: {}", id);
-                        println!{"{:#?}", state}; 
+                        // println!("Id: {}", id);
+                        // println!{"{:#?}", state};
+                    },
+                    Ok(Message::AssignedOrdersMsg(assigned_orders_str)) => {
+                        //println!("Assigned orders: {:#?}", assigned_orders_str);
+                        let assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_str(&assigned_orders_str).unwrap();
+                       
+                        if let Some(assigned_order) = assigned_orders_map.get(&elevator_id) {
+                            // println!("Assigned orders: {:#?}", assigned_order);
+                            // all_orders.assigned_orders = assigned_orders;
+                            new_order_tx.send(*assigned_order).unwrap();
+                        } else {
+                            println!("ID 0 not found!");
+                        }
+                        
                     },
                     Err(e) => {
                         println!("Received message of unexpected format");
@@ -121,8 +140,10 @@ pub fn distributor(
                 master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
             },
             recv(master_ticker) -> _ => {
-                // call cost func
-                // bcast results
+                let assigned_orders_str = cost_function::assign_orders(&states, &all_orders.cab_orders, &all_orders.hall_orders);
+                let assigned_orders_msg = Message::AssignedOrdersMsg(assigned_orders_str);
+                master_transmit_tx.send(assigned_orders_msg).unwrap();
+                //println!("Assigned orders: {:#?}", assigned_orders);
             }
         }
     }
@@ -131,7 +152,7 @@ pub fn distributor(
 pub fn create_states() -> States {
     std::array::from_fn(|_| elevator_fsm::State {
         obstructed: false,
-        motorstop: true,
+        motorstop: false,
         emergency_stop: false,
         behaviour: elevator_fsm::Behaviour::Idle,
         floor: 0,

@@ -30,6 +30,9 @@ pub fn receiver(
                 Ok(Message::CallMsg(call)) => {
                     message_tx.send(Message::CallMsg(call)).unwrap();
                 }
+                Ok(Message::AssignedOrdersMsg(assigned_orders)) => {
+                    message_tx.send(Message::AssignedOrdersMsg(assigned_orders)).unwrap();
+                }
                 Err(e) => {
                     println!("ERROR: Received message with unexpected format.");
                     println!("{:#?}", e);

@@ -11,7 +11,7 @@ use serde::{Serialize, Deserialize};
 
 use crossbeam_channel as cbc;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum Behaviour {
     Idle,
     Moving,
@@ -101,7 +101,7 @@ pub fn elevator_fsm(
 
                 match state.behaviour {
                     Behaviour::Idle => {
-                        println!("Values: New_order = {:#?}, state.floor = {}, state.direction = {}", &orders, state.floor, state.direction);
+                        //println!("Values: New_order = {:#?}, state.floor = {}, state.direction = {}", &orders, state.floor, state.direction);
                         match () {
                             _ if orders[state.floor as usize][(state.direction) as usize] ||
                                 orders[state.floor as usize][CAB as usize] => {
@@ -145,9 +145,15 @@ pub fn elevator_fsm(
                                 motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                                 // newState = true
                             }
+                            _ if orders[state.floor as usize].iter().all(|&x| x == false) => {
+                                continue;
+                                
+                            }
                             () => {
                                 println!("Handling new order in unexpected state.")
                             }
+                                
+            
 
                         }
                     },
@@ -246,31 +252,27 @@ pub fn elevator_fsm(
                     Behaviour::DoorOpen => {
                         match () {
                             _ if orders::order_in_direction(&orders, state.floor, state.direction) => {
+                                println!("Case 1");
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 state.behaviour = Behaviour::Moving;
-                                // motorTimer
-                                // motor.c <- false
                                 new_state_tx.send(state.clone()).unwrap();
-                                println!("Case 1");
+
                                 motor_timer = cbc::never();
-                                // new_state
                             },
                             _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
+                                println!("Case 2");
                                 door_open_tx.send(true).unwrap();
                                 state.direction = direction::direction_opposite(state.direction);
+                                new_state_tx.send(state.clone()).unwrap();
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
                             },
                             _ if orders::order_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
-                                door_open_tx.send(true).unwrap();
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 state.behaviour = Behaviour::Moving;
-                                // motorTimer
-                                // motor.c <- false
                                 new_state_tx.send(state.clone()).unwrap();
                                 println!("Case 3");
                                 motor_timer = cbc::never();
-                                // new_state
                             },
                             _ => {
                                 state.behaviour = Behaviour::Idle;
@@ -332,5 +334,13 @@ pub fn elevator_fsm(
                 elevator.stop_button_light(state.emergency_stop);
             }
         }
+    }
+}
+
+pub fn behaviour_to_string(behaviour: Behaviour) -> String {
+    match behaviour {
+        Behaviour::Idle => "idle".to_string(),
+        Behaviour::Moving => "moving".to_string(),
+        Behaviour::DoorOpen => "doorOpen".to_string(),
     }
 }
