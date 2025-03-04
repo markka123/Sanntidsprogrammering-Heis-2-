@@ -14,10 +14,9 @@ use std::sync::Mutex;
 
 pub fn transmitter(
     elevator_id: u8,
-    call_button_rx: cbc::Receiver<CallButton>,
     new_state_rx: cbc::Receiver<State>,
-    order_completed_rx: cbc::Receiver<CallButton>,
     master_transmit_rx: cbc::Receiver<String>,
+    call_msg_rx: cbc::Receiver<(u8, CallButton)>,
     pending_orders: Arc<Mutex<Vec<(u8, CallButton)>>>,
     socket: Arc<UdpSocket>,
 ) {
@@ -38,30 +37,18 @@ pub fn transmitter(
             recv(new_state_rx) -> a => {
                 let new_state = a.unwrap();
                 state = new_state;
-                //println!("State updated!");
             },
-            recv(order_completed_rx) -> a => {
-                let call = a.unwrap();
-                let msg_type = COMPLETED_ORDER;
+            recv(call_msg_rx) -> a => {
+                let (msg_type, call) = a.unwrap();
                 let msg = Message::CallMsg((elevator_id, [msg_type, call.floor, call.call]));
                 broadcast_message(&socket, &msg);
-                pending_orders.lock().unwrap().push((COMPLETED_ORDER, call));
-                println!("Added order to pending orders");
-            },
-            recv(call_button_rx) -> a => {
-                let call = a.unwrap();
-                let msg_type = NEW_ORDER;
-                let msg = Message::CallMsg((elevator_id, [msg_type, call.floor, call.call]));
-                broadcast_message(&socket, &msg);
-                pending_orders.lock().unwrap().push((NEW_ORDER, call));
-                println!("Added order to pending orders");
+                pending_orders.lock().unwrap().push((msg_type, call));
             },
             recv(pending_orders_ticker) -> _ => {
                 pending_orders.lock().unwrap().iter().for_each(|(msg_type, call)| {
                     let msg = Message::CallMsg((elevator_id, [*msg_type, call.floor, call.call]));
                     broadcast_message(&socket, &msg);
                 });
-                //println!("Pending orders: {:#?}", pending_orders);
             },
             recv(state_ticker) -> _ => {
                 let msg = Message::StateMsg((elevator_id, state.clone()));
@@ -73,7 +60,6 @@ pub fn transmitter(
                 let msg = Message::AllAssignedOrdersMsg((elevator_id, all_assigned_orders_str));
 
                 broadcast_message(&socket, &msg);
-                // println!("Hei");
             }
         }
     }

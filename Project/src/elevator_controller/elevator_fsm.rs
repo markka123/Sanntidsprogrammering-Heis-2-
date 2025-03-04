@@ -92,8 +92,6 @@ pub fn elevator_fsm(
             recv(new_order_rx) -> a => {
                 let new_orders = a.unwrap();
                 orders = new_orders;
-                // println!("New order received:\n {:#?}", orders);
-                // println!("\nCurrent states are:\n {:#?}\n", state);
 
                 if state.emergency_stop {
                     continue;
@@ -101,24 +99,21 @@ pub fn elevator_fsm(
 
                 match state.behaviour {
                     Behaviour::Idle => {
-                        //println!("Values: New_order = {:#?}, state.floor = {}, state.direction = {}", &orders, state.floor, state.direction);
                         match () {
                             _ if orders[state.floor as usize][(state.direction) as usize] ||
                                 orders[state.floor as usize][CAB as usize] => {
                                 door_open_tx.send(true).unwrap();
-                                orders::order_done(state.floor, state.direction, orders, &order_completed_tx); //channel
-                                println!("Order done 1");
+                                orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
+                                //println!("Order done 1");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
-
-                                // newState() // channelCAB as usize
                             },
                             _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
                                 door_open_tx.send(true).unwrap();
                                 state.direction = direction::direction_opposite(state.direction);
                                 new_state_tx.send(state.clone()).unwrap();
-                                orders::order_done(state.floor, state.direction, orders, &order_completed_tx); //channel
-                                println!("Order done 2");
+                                orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
+                                //println!("Order done 2");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -141,7 +136,7 @@ pub fn elevator_fsm(
                                 
                             }
                             () => {
-                                println!("Handling new order in unexpected state.")
+                                //println!("Handling new order in unexpected state.")
                             }
                                 
             
@@ -152,7 +147,7 @@ pub fn elevator_fsm(
                         if orders[state.floor as usize][CAB as usize] || orders[state.floor as usize][state.direction as usize] {
                             door_open_tx.send(true).unwrap();
                             orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                            println!("Order done 3");
+                            //println!("Order done 3");
                         }
                     },
                     Behaviour::Moving => {
@@ -166,7 +161,6 @@ pub fn elevator_fsm(
                 motor_timer = cbc::never();
                 motorstop_tx.send(false).unwrap();
                 state.floor = floor;
-                // println!("\n\nEntered floor nr: {},\n with current states:\n {:#?}\n", state.floor, state);
                 elevator.floor_indicator(state.floor);
 
                 if state.emergency_stop {
@@ -180,7 +174,7 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 4");
+                                //println!("Order done 4");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -189,7 +183,7 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 5");
+                                //println!("Order done 5");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -198,7 +192,7 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 6");
+                                //println!("Order done 6");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -211,7 +205,7 @@ pub fn elevator_fsm(
                                 door_open_tx.send(true).unwrap();
                                 state.direction = direction::direction_opposite(state.direction);
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 7");
+                                //println!("Order done 7");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -233,13 +227,12 @@ pub fn elevator_fsm(
 
                     },
                     _ => {
-                        println!("Floor indicator received while in unexpected state")
+                        //println!("Floor indicator received while in unexpected state")
                     }
                 }
             },
 
             recv(door_close_rx) -> _ => {
-                // println!("Closing doors");
                 match state.behaviour {
                     Behaviour::DoorOpen => {
                         match () {
@@ -254,7 +247,7 @@ pub fn elevator_fsm(
                                 state.direction = direction::direction_opposite(state.direction);
                                 new_state_tx.send(state.clone()).unwrap();
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 7");
+                                //println!("Order done 7");
                             },
                             _ if orders::order_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
                                 state.direction = direction::direction_opposite(state.direction);
@@ -277,7 +270,7 @@ pub fn elevator_fsm(
                         }
                     }
                     _ => {
-                        println!("Closing doors in unexpected state");
+                        //println!("Closing doors in unexpected state");
                     }
                 }
 
@@ -291,13 +284,13 @@ pub fn elevator_fsm(
                 let is_motorstop = a.unwrap();
                 if state.motorstop != is_motorstop {
                     state.motorstop = is_motorstop;
-                    println!("{}", if state.motorstop { "Lost motor power!" } else { "Regained motor power!" } );
+                    //println!("{}", if state.motorstop { "Lost motor power!" } else { "Regained motor power!" } );
                 }
             },
 
             recv(obstructed_rx) -> a => {
                 let is_obstructed = a.unwrap();
-                println!("\nObstructed: {:#?}\n\n", is_obstructed);
+                //println!("\nObstructed: {:#?}\n\n", is_obstructed);
                 if is_obstructed != state.obstructed {
                     state.obstructed = is_obstructed;
                 }

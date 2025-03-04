@@ -17,12 +17,12 @@ fn main() -> std::io::Result<()> {
     
     let (port, elevator_id) = fetch_command_line_args();
 
-    println!("{}, {}", port, elevator_id);
+    //println!("{}, {}", port, elevator_id);
 
     let addr = format!("localhost:{}", port);
 
     let elevator = e::Elevator::init(&addr, config::ELEV_NUM_FLOORS)?;
-    println!("Elevator started:\n{:#?}", elevator);
+    //println!("Elevator started:\n{:#?}", elevator);
 
     let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
     let (emergency_reset_tx, emergency_reset_rx) = cbc::unbounded::<bool>();
@@ -89,7 +89,7 @@ pub fn fetch_command_line_args() -> (u16, u8) {
         match command_line_args[1].parse::<u16>() {
             Ok(p) => p,
             Err(_) => {
-                eprintln!("Warning: Invalid port provided. Using default: {}", default_port);
+                //println!("Warning: Invalid port provided. Using default: {}", default_port);
                 default_port
             }
         }
@@ -101,7 +101,7 @@ pub fn fetch_command_line_args() -> (u16, u8) {
         match command_line_args[2].parse::<u8>() {
             Ok(id) => id,
             Err(_) => {
-                eprintln!("Warning: Invalid elevator ID provided. Using default: {}", default_elevator_id);
+                //println!("Warning: Invalid elevator ID provided. Using default: {}", default_elevator_id);
                 default_elevator_id
             }
         }

@@ -15,11 +15,13 @@ use serde_json;
 
 pub fn receiver(
     message_tx: cbc::Sender<Message>,
-    master_activate_tx: cbc::Sender<()>,
+    master_activate_tx: cbc::Sender<bool>,
+    is_online_tx: cbc::Sender<bool>,
     socket: Arc<UdpSocket>,
     elevator_id: u8
 ) {
 
+    let mut network_timer = cbc::after(config::NETWORK_TIMER_DURATION);
     let mut master_id = config::ELEV_NUM_ELEVATORS;
     let mut master_timer = cbc::after(config::MASTER_TIMER_DURATION);
 
@@ -33,10 +35,12 @@ pub fn receiver(
             }
             default(config::UDP_POLL_PERIOD) => {
                 if let Some((received_message, sender_addr)) = udp::receive_udp_message::<String>(&socket) {
-                    //let message = serde_json::from_value::<Message>(received_message);
                     match serde_json::from_str::<Message>(&received_message) {
                         Ok(Message::StateMsg((elevator_id, state))) => {
+                            network_timer = cbc::after(config::NETWORK_TIMER_DURATION);
+                            is_online_tx.send(true).unwrap();
                             message_tx.send(Message::StateMsg((elevator_id, state))).unwrap();
+
                         }
                         Ok(Message::CallMsg(call)) => {
                             message_tx.send(Message::CallMsg(call)).unwrap();
@@ -48,9 +52,9 @@ pub fn receiver(
    
                         }
                         Err(e) => {
-                            println!("ERROR: Received message with unexpected format.");
-                            println!("Received: {:#?}", received_message);
-                            println!("Deserialization Error: {:#?}", e);
+                            //println!("ERROR: Received message with unexpected format.");
+                            //println!("Received: {:#?}", received_message);
+                            //println!("Deserialization Error: {:#?}", e);
                         }
                     }
                 }
