@@ -18,7 +18,7 @@ During normal mode of operation all elevators continously recieves all elevators
 
 
 ### Module Architecture & Threads
-The proposed structure consists of the following modules
+The proposed structure consists of the following modules:
 
 
 
