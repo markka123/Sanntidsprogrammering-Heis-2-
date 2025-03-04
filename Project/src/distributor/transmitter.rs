@@ -17,7 +17,7 @@ pub fn transmitter(
     call_button_rx: cbc::Receiver<CallButton>,
     new_state_rx: cbc::Receiver<State>,
     order_completed_rx: cbc::Receiver<CallButton>,
-    master_transmit_rx: cbc::Receiver<Message>,
+    master_transmit_rx: cbc::Receiver<String>,
     pending_orders: Arc<Mutex<Vec<(u8, CallButton)>>>,
     socket: Arc<UdpSocket>,
 ) {
@@ -67,9 +67,14 @@ pub fn transmitter(
                 let msg = Message::StateMsg((elevator_id, state.clone()));
                 broadcast_message(&socket, &msg);
             },
-            recv(master_transmit_rx) -> assigned_orders_msg => {
-                broadcast_message(&socket, &assigned_orders_msg.unwrap());
-            },
+            recv(master_transmit_rx) -> a => {
+                let assigned_orders_str = a.unwrap();
+                let all_assigned_orders_str: serde_json::Value = serde_json::from_str(&assigned_orders_str).expect("Failed");
+                let msg = Message::AllAssignedOrdersMsg((elevator_id, all_assigned_orders_str));
+
+                broadcast_message(&socket, &msg);
+                // println!("Hei");
+            }
         }
     }
 }

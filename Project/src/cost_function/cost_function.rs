@@ -74,18 +74,7 @@ pub fn assign_orders(
         .expect("Failed to read stdout");
 
     let assigned_orders_str = String::from_utf8_lossy(&output.stdout).to_string();
+    
     assigned_orders_str
 }
 
-
-//MAIN
-
-// pub fn execute_offline_order() {
-//     let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
-//     let cab_requests = vec![vec![false, false, true, true]];
-//     let hall_requests = vec![vec![false, false], vec![true, false], vec![false, false], vec![false, true]];
-
-
-//     let result = assign_orders(&elevator_variables, &cab_requests, &hall_requests);
-//     println!("Result from executable:\n{}", result);
-// }
