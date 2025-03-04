@@ -20,13 +20,13 @@ pub fn receiver(
     elevator_id: u8
 ) {
 
-    let mut master_id = 0;
+    let mut master_id = config::ELEV_NUM_ELEVATORS;
     let mut master_timer = cbc::after(config::MASTER_TIMER_DURATION);
 
     loop {
         cbc::select! {
             recv(master_timer) -> _ => {
-                if elevator_id == master_id + 1 || (elevator_id == 0 && master_id == config::ELEV_NUM_ELEVATORS - 1) {
+                if elevator_id == master_id + 1 || (elevator_id == 0 && master_id >= config::ELEV_NUM_ELEVATORS - 1) {
                     master_activate_tx.send(()).unwrap();
                     println!("Id {} is taking over as master because master_id {} died!", elevator_id, master_id);
                 }
@@ -41,8 +41,8 @@ pub fn receiver(
                         Ok(Message::CallMsg(call)) => {
                             message_tx.send(Message::CallMsg(call)).unwrap();
                         }
-                        Ok(Message::AllAssignedOrdersMsg((masters_id, all_assigned_orders))) => {
-                            master_id = masters_id;
+                        Ok(Message::AllAssignedOrdersMsg((incoming_master_id, all_assigned_orders))) => {
+                            master_id = incoming_master_id;
                             master_timer = cbc::after(config::MASTER_TIMER_DURATION);
                             message_tx.send(Message::AllAssignedOrdersMsg((master_id, all_assigned_orders))).unwrap();
    

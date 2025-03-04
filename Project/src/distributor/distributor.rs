@@ -95,9 +95,6 @@ pub fn distributor(
     let mut all_orders = AllOrders::init();
     
     let mut master_ticker = cbc::never();
-    if elevator_id == 0 {
-        master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
-    }
     
 
     loop {
