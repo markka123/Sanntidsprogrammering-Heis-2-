@@ -175,7 +175,7 @@ pub fn distributor(
                                     let assigned_any = all_assigned_orders_map.iter().any(|(_, assigned_orders)| {
                                         assigned_orders[order.floor as usize][order.call as usize]
                                     });
-                                    if assigned_any {println!("Poped from pending orders");}
+                                    // if assigned_any {println!("Poped from pending orders");}
 
                                     return !assigned_any;
                                     
@@ -184,7 +184,7 @@ pub fn distributor(
                                     let not_assigned_any = all_assigned_orders_map.iter().all(|(_, assigned_orders)| {
                                         !assigned_orders[order.floor as usize][order.call as usize]
                                     });
-                                    if !not_assigned_any {println!("Poped from pending orders");}
+                                    // if !not_assigned_any {println!("Poped from pending orders");}
                                     
                                     return not_assigned_any;
                                     
@@ -196,7 +196,7 @@ pub fn distributor(
                                 {
                                     if (assigned_orders[order.floor as usize][order.call as usize] && *order_type == NEW_ORDER) 
                                     || (!assigned_orders[order.floor as usize][order.call as usize] && *order_type == COMPLETED_ORDER) {
-                                        println!("Poped from pending orders");
+                                        // println!("Poped from pending orders");
                                         return false;
                                         
                                     }
@@ -220,10 +220,10 @@ pub fn distributor(
             },
             recv(is_online_rx) -> is_online_msg => {
                 let network_status = is_online_msg.unwrap();
-                println!("network_status: {:#?}", network_status);
                 if network_status && !is_online {
                     offline_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
                     is_online = true;
+                    println!("network_status: {:#?}", network_status);
                 } else if !network_status && is_online {
                     for (order_type, order) in pending_orders.lock().unwrap().iter() {
                         if *order_type == NEW_ORDER {
@@ -236,6 +236,7 @@ pub fn distributor(
                         floor += 1;  
                     }
                     is_online = false;
+                    println!("network_status: {:#?}", network_status);
                     new_order_tx.send(offline_orders).unwrap();
                 }
             }
