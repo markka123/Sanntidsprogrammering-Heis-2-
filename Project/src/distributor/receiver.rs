@@ -33,6 +33,9 @@ pub fn receiver(
                 Ok(Message::AllAssignedOrdersMsg(assigned_orders)) => {
                     message_tx.send(Message::AllAssignedOrdersMsg(assigned_orders)).unwrap();
                 }
+                Ok(Message::AllAssignedOrdersTup((elevator_id, assigned_orders))) => {
+                    // ...
+                }
                 Err(e) => {
                     println!("ERROR: Received message with unexpected format.");
                     println!("{:#?}", e);

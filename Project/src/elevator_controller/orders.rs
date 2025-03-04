@@ -36,8 +36,6 @@ impl AllOrders {
         } else {
             //Handle error
         }
-        println!("Btn: {:#?}", call_button);
-        // self.orders[call_button.floor as usize][call_button.call as usize] = true;
     }
 
     pub fn remove_order(&mut self, call_button: CallButton, elevator_id: usize) {
@@ -48,7 +46,6 @@ impl AllOrders {
         } else {
             //Handle error
         }
-        // self.orders[call_button.floor as usize][call_button.call as usize] = false;
     }
 }
 
