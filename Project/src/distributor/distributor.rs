@@ -29,7 +29,7 @@ use std::collections::HashMap;
 pub enum Message {
     CallMsg((u8, [u8; 3])),
     StateMsg((u8, State)),
-    AllAssignedOrdersMsg(String),
+    AllAssignedOrdersMsg((u8, Value)),
     // AssignedOrders([Orders; config::ELEV_NUM_ELEVATORS as usize]),
     // HallOrders()
 }
@@ -52,7 +52,7 @@ pub fn distributor(
     let mut states:States = create_states();
 
     let (message_tx, message_rx) = cbc::unbounded::<Message>();
-    let (master_transmit_tx, master_transmit_rx) = cbc::unbounded::<Message>();
+    let (master_transmit_tx, master_transmit_rx) = cbc::unbounded::<String>();
     let (master_activate_tx, master_activate_rx) = cbc::unbounded::<()>();
     let (call_button_tx, call_button_rx) = cbc::unbounded::<CallButton>();
 
@@ -88,7 +88,7 @@ pub fn distributor(
     if elevator_id == 0 {
         master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
     }
-
+    
 
     loop {
         lights::set_lights(&all_orders, elevator.clone(), elevator_id);
@@ -120,17 +120,19 @@ pub fn distributor(
                         let (id, state) = state_msg;
                         states[id as usize] = state;
                     },
-                    Ok(Message::AllAssignedOrdersMsg(all_assigned_orders_str)) => {
-                        let all_assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_str(&all_assigned_orders_str).unwrap();
-                        if !(states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed) {
-                            if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
-                                // println!("Assigned orders: {:#?}", assigned_order);
-                                // all_orders.assigned_orders = assigned_orders;
-                                new_order_tx.send(*assigned_orders).unwrap();
-                            } else {
-                                println!("ID not found!");
-                            }
-                        }
+                    Ok(Message::AllAssignedOrdersMsg((_, all_assigned_orders_str))) => {
+
+                        // let all_assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_str(&all_assigned_orders_str).unwrap();
+                        // if !(states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed) {
+                        //     if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
+                        //         // println!("Assigned orders: {:#?}", assigned_order);
+                        //         // all_orders.assigned_orders = assigned_orders;
+                        //         new_order_tx.send(*assigned_orders).unwrap();
+                        //     } else {
+                        //         println!("ID not found!");
+                        //     }
+                        // }
+                        println!("Recieving!");
                             
                     },
                     Err(e) => {
@@ -144,9 +146,11 @@ pub fn distributor(
             },
             recv(master_ticker) -> _ => {
                 let assigned_orders_str = cost_function::assign_orders(&states, &all_orders.cab_orders, &all_orders.hall_orders);
-                let assigned_orders_msg = Message::AllAssignedOrdersMsg(assigned_orders_str);
-                master_transmit_tx.send(assigned_orders_msg).unwrap();
-                //println!("Assigned orders: {:#?}", assigned_orders);
+            
+
+                master_transmit_tx.send(assigned_orders_str).unwrap();
+                // println!("Hei");
+                
             }
         }
     }
