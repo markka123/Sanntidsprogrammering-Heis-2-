@@ -35,7 +35,7 @@ pub fn assign_orders(
     states: &States,
     cab_requests: &CabOrders,
     hall_requests: &HallOrders,
-) -> Vec<Vec<Vec<bool>>> {
+) -> String{
 
     let mut states_map = serde_json::Map::new();
 
@@ -74,32 +74,7 @@ pub fn assign_orders(
         .expect("Failed to read stdout");
 
     let assigned_orders_str = String::from_utf8_lossy(&output.stdout).to_string();
-
-    let assigned_orders_json: Value = serde_json::from_str(&assigned_orders_str)
-    .expect("Failed to parse assigned orders JSON");
-
-    let mut assigned_orders_matrix: Vec<Vec<Vec<bool>>> = vec![];
-
-    // 🔄 **Parse the 3D matrix from JSON**
-    if let Some(matrix) = assigned_orders_json.as_array() {
-        for elevator in matrix {
-            let mut elevator_orders: Vec<Vec<bool>> = vec![];
-
-            if let Some(floors) = elevator.as_array() {
-                for floor in floors {
-                    let floor_orders = floor.as_array()
-                        .unwrap_or(&vec![]) // Default empty if missing
-                        .iter()
-                        .map(|v| v.as_bool().unwrap_or(false)) // Convert JSON bool to Rust bool
-                        .collect();
-                    elevator_orders.push(floor_orders);
-                }
-            }
-            assigned_orders_matrix.push(elevator_orders);
-        }
-    }
-
-    assigned_orders_matrix
+    assigned_orders_str
 }
 
 

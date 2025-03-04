@@ -30,8 +30,7 @@ use std::sync::Mutex;
 pub enum Message {
     CallMsg((u8, [u8; 3])),
     StateMsg((u8, State)),
-    AllAssignedOrdersMsg(Vec<Vec<Vec<bool>>>),
-    AllAssignedOrdersTup((u8, String)),
+    AllAssignedOrdersMsg(String),
     // AssignedOrders([Orders; config::ELEV_NUM_ELEVATORS as usize]),
     // HallOrders()
 }
@@ -123,7 +122,7 @@ pub fn distributor(
                         states[id as usize] = state;
                     },
                     Ok(Message::AllAssignedOrdersMsg(all_assigned_orders_str)) => {
-                        // let all_assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_str(&all_assigned_orders_str).unwrap();
+                        let all_assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_str(&all_assigned_orders_str).unwrap();
                         // // if !(states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed) {
                         if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
                             new_order_tx.send(*assigned_orders).unwrap();
@@ -167,9 +166,6 @@ pub fn distributor(
                             }
                             return true;
                         });
-                    }
-                    Ok(Message::AllAssignedOrdersTup(msg)) => {
-                        println!("Received all assigned orders");
                     }
                     Err(e) => {
                         println!("Received message of unexpected format");
