@@ -17,11 +17,14 @@ pub fn receiver(
     message_tx: cbc::Sender<Message>,
     master_activate_tx: cbc::Sender<()>,
     socket: Arc<UdpSocket>,
+    elevator_id: u8
 ) {
+
+    let master_id = 0;
+    let mut master_timer = cbc::after(config::MASTER_TIMER_DURATION);
+
     loop {
-        if let Some((received_message, sender_addr)) = 
-        udp::receive_udp_message::<String>(&socket) 
-        {
+        if let Some((received_message, sender_addr)) = udp::receive_udp_message::<String>(&socket) {
             //let message = serde_json::from_value::<Message>(received_message);
             match serde_json::from_str::<Message>(&received_message) {
                 Ok(Message::StateMsg((elevator_id, state))) => {
@@ -32,10 +35,21 @@ pub fn receiver(
                 }
                 Ok(Message::AllAssignedOrdersMsg(assigned_orders)) => {
                     message_tx.send(Message::AllAssignedOrdersMsg(assigned_orders)).unwrap();
+                    master_timer = cbc::after(config::MASTER_TIMER_DURATION);
+
+                    //Update master_id
                 }
                 Err(e) => {
                     println!("ERROR: Received message with unexpected format.");
                     println!("{:#?}", e);
+                }
+            }
+        }
+        cbc::select! {
+            recv(master_timer) -> _ => {
+            
+                if elevator_id == master_id + 1 || (elevator_id == 0 && master_id == config::ELEV_NUM_ELEVATORS - 1) {
+                    master_activate_tx.send(()).unwrap();
                 }
             }
         }

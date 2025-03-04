@@ -17,7 +17,7 @@ pub fn transmitter(
     new_state_rx: cbc::Receiver<State>,
     order_completed_rx: cbc::Receiver<CallButton>,
     master_transmit_rx: cbc::Receiver<Message>,
-    socket: Arc<UdpSocket>,
+    socket: Arc<UdpSocket>
 ) {
     let mut state = State {
         obstructed: false,

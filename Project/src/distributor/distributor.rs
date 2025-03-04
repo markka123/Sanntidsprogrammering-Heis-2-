@@ -65,7 +65,8 @@ pub fn distributor(
         spawn(move || receiver::receiver(
             message_tx,
             master_activate_tx, 
-            socket_receiver
+            socket_receiver,
+            elevator_id
         ));
     }
     {
@@ -76,13 +77,18 @@ pub fn distributor(
                 new_state_rx,
                 order_completed_rx,
                 master_transmit_rx,
-                socket_transmitter,
+                socket_transmitter
             )
         });
     }
 
     let mut all_orders = AllOrders::init();
-    let mut master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
+    
+    let mut master_ticker = cbc::never();
+    if elevator_id == 0 {
+        master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
+    }
+
 
     loop {
         lights::set_lights(&all_orders, elevator.clone(), elevator_id);
