@@ -59,7 +59,7 @@ pub fn assign_orders(
     });
 
     let json_input_string = json_input.to_string();
-    // println!("JSON Input:\n{}", json_input_string);
+    // //println!("JSON Input:\n{}", json_input_string);
 
     // Path to the executable
     let executable_path = "src/cost_function/executables/hall_request_assigner";

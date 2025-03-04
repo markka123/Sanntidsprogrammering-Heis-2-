@@ -37,7 +37,6 @@ pub fn transmitter(
             recv(new_state_rx) -> a => {
                 let new_state = a.unwrap();
                 state = new_state;
-                //println!("State updated!");
             },
             recv(call_msg_rx) -> a => {
                 let (msg_type, call) = a.unwrap();
@@ -50,7 +49,6 @@ pub fn transmitter(
                     let msg = Message::CallMsg((elevator_id, [*msg_type, call.floor, call.call]));
                     broadcast_message(&socket, &msg);
                 });
-                //println!("Pending orders: {:#?}", pending_orders);
             },
             recv(state_ticker) -> _ => {
                 let msg = Message::StateMsg((elevator_id, state.clone()));
@@ -62,7 +60,6 @@ pub fn transmitter(
                 let msg = Message::AllAssignedOrdersMsg((elevator_id, all_assigned_orders_str));
 
                 broadcast_message(&socket, &msg);
-                // println!("Hei");
             }
         }
     }

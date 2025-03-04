@@ -54,15 +54,15 @@ pub fn receive_udp_message<T: DeserializeOwned>(socket: &Arc<UdpSocket>) -> Opti
             if let Ok(message) = serde_json::from_slice::<T>(&buf[..size]) {
                 return Some((message, sender_addr.to_string()));
             } else {
-                println!(
-                    "[UDP] Network module failed to deserialize message from {}",
-                    sender_addr
-                );
+                //println!(
+                //     "[UDP] Network module failed to deserialize message from {}",
+                //     sender_addr
+                // );
             }
         }
         Err(e) => {
             if e.kind() != io::ErrorKind::WouldBlock {
-                println!("[UDP] Error receiving message: {:?}", e);
+                //println!("[UDP] Error receiving message: {:?}", e);
             }
         }
     }

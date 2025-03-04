@@ -30,7 +30,6 @@ pub fn receiver(
             recv(master_timer) -> _ => {
                 if elevator_id == master_id + 1 || (elevator_id == 0 && master_id == config::ELEV_NUM_ELEVATORS - 1) {
                     master_activate_tx.send(true).unwrap();
-                    println!("Id {} is taking over as master because master_id {} died!", elevator_id, master_id);
                 }
             },
             recv(network_timer) -> _ =>{
@@ -40,7 +39,6 @@ pub fn receiver(
             },
             default(config::UDP_POLL_PERIOD) => {
                 if let Some((received_message, sender_addr)) = udp::receive_udp_message::<String>(&socket) {
-                    //let message = serde_json::from_value::<Message>(received_message);
                     match serde_json::from_str::<Message>(&received_message) {
                         Ok(Message::StateMsg((elevator_id, state))) => {
                             network_timer = cbc::after(config::NETWORK_TIMER_DURATION);
@@ -58,9 +56,9 @@ pub fn receiver(
    
                         }
                         Err(e) => {
-                            println!("ERROR: Received message with unexpected format.");
-                            println!("Received: {:#?}", received_message);
-                            println!("Deserialization Error: {:#?}", e);
+                            //println!("ERROR: Received message with unexpected format.");
+                            //println!("Received: {:#?}", received_message);
+                            //println!("Deserialization Error: {:#?}", e);
                         }
                     }
                 }

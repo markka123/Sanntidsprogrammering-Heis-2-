@@ -160,54 +160,40 @@ pub fn distributor(
                         let all_assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_value(all_assigned_orders_str).unwrap();
                         if !(states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed) {
                             if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
-                                // println!("Assigned orders: {:#?}", assigned_order);
-                                // all_orders.assigned_orders = assigned_orders;
                                 new_order_tx.send(*assigned_orders).unwrap();
                             } else {
-                                println!("ID not found!");
                             }
                         }
-                        // }
-                        //println!("Assigned orders entered");
                         pending_orders.lock().unwrap().retain(|(order_type, order)| {
                             if order.call == e::HALL_UP || order.call == e::HALL_DOWN {
                                 if *order_type == NEW_ORDER {
                                     let assigned_any = all_assigned_orders_map.iter().any(|(_, assigned_orders)| {
                                         assigned_orders[order.floor as usize][order.call as usize]
                                     });
-                                    // if assigned_any {println!("Poped from pending orders");}
-
-                                    return !assigned_any;
-                                    
+                                    return !assigned_any;      
                                 }
                                 else if *order_type == COMPLETED_ORDER {
                                     let not_assigned_any = all_assigned_orders_map.iter().all(|(_, assigned_orders)| {
                                         !assigned_orders[order.floor as usize][order.call as usize]
                                     });
-                                    // if !not_assigned_any {println!("Poped from pending orders");}
-                                    
                                     return not_assigned_any;
-                                    
                                 }
                             }
                             else if order.call == e::CAB {
-                                if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id)
-                         
-                                {
+                                if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
                                     if (assigned_orders[order.floor as usize][order.call as usize] && *order_type == NEW_ORDER) 
                                     || (!assigned_orders[order.floor as usize][order.call as usize] && *order_type == COMPLETED_ORDER) {
-                                        // println!("Poped from pending orders");
+                                        // //println!("Poped from pending orders");
                                         return false;
-                                        
                                     }
                                 }
-                            }
-                            return true;
+                            } return true;
+                            
                         });
                     }
                     Err(e) => {
-                        println!("Received message of unexpected format");
-                        println!("{:#?}", e);
+                        //eprintln!("Received message of unexpected format");
+                        //eprintln!("{:#?}", e);
                     }
                 }
             },
@@ -223,7 +209,6 @@ pub fn distributor(
                 if network_status && !is_online {
                     offline_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
                     is_online = true;
-                    println!("network_status: {:#?}", network_status);
                 } else if !network_status && is_online {
                     for (order_type, order) in pending_orders.lock().unwrap().iter() {
                         if *order_type == NEW_ORDER {
@@ -236,7 +221,6 @@ pub fn distributor(
                         floor += 1;  
                     }
                     is_online = false;
-                    println!("network_status: {:#?}", network_status);
                     new_order_tx.send(offline_orders).unwrap();
                 }
             }
