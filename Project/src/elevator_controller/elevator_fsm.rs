@@ -11,7 +11,7 @@ use serde::{Serialize, Deserialize};
 
 use crossbeam_channel as cbc;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum Behaviour {
     Idle,
     Moving,
@@ -101,17 +101,13 @@ pub fn elevator_fsm(
 
                 match state.behaviour {
                     Behaviour::Idle => {
-                        println!("Values: New_order = {:#?}, state.floor = {}, state.direction = {}", &orders, state.floor, state.direction);
+                        //println!("Values: New_order = {:#?}, state.floor = {}, state.direction = {}", &orders, state.floor, state.direction);
                         match () {
                             _ if orders[state.floor as usize][(state.direction) as usize] ||
                                 orders[state.floor as usize][CAB as usize] => {
                                 door_open_tx.send(true).unwrap();
-
-                                orders[state.floor as usize][(state.direction) as usize] = false; // delete from orders
-                                elevator.call_button_light(state.floor, state.direction, false);
-                                elevator.call_button_light(state.floor, CAB, false);
-
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx); //channel
+                                println!("Order done 1");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
 
@@ -119,13 +115,10 @@ pub fn elevator_fsm(
                             },
                             _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
                                 door_open_tx.send(true).unwrap();
-
                                 state.direction = direction::direction_opposite(state.direction);
                                 new_state_tx.send(state.clone()).unwrap();
-                                orders[state.floor as usize][(state.direction) as usize]; // delete from orders
-
-
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx); //channel
+                                println!("Order done 2");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -135,7 +128,6 @@ pub fn elevator_fsm(
                                 state.behaviour = Behaviour::Moving;
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
-                                // newState = true
                             },
                             _ if orders::order_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
                                 state.direction = direction::direction_opposite(state.direction);
@@ -143,21 +135,24 @@ pub fn elevator_fsm(
                                 state.behaviour = Behaviour::Moving;
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
-                                // newState = true
+                            }
+                            _ if orders[state.floor as usize].iter().all(|&x| x == false) => {
+                                continue;
+                                
                             }
                             () => {
                                 println!("Handling new order in unexpected state.")
                             }
+                                
+            
 
                         }
                     },
                     Behaviour::DoorOpen => {
                         if orders[state.floor as usize][CAB as usize] || orders[state.floor as usize][state.direction as usize] {
                             door_open_tx.send(true).unwrap();
-
-                            orders[state.floor as usize][CAB as usize] = false;
-                            orders[state.floor as usize][state.direction as usize]= false;
                             orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
+                            println!("Order done 3");
                         }
                     },
                     Behaviour::Moving => {
@@ -185,6 +180,7 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
+                                println!("Order done 4");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -193,6 +189,7 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
+                                println!("Order done 5");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -201,21 +198,22 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
+                                println!("Order done 6");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
-                            }
+                            },
+                            _ if orders::order_in_direction(&orders, floor, state.direction) => {
+                                motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
+                            },
 
                             _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 state.direction = direction::direction_opposite(state.direction);
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
+                                println!("Order done 7");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
-                            },
-
-                            _ if orders::order_in_direction(&orders, floor, state.direction) => {
-                                motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             },
 
                             _ if orders::order_in_direction(&orders, floor, direction::direction_opposite(state.direction)) => {
@@ -241,44 +239,34 @@ pub fn elevator_fsm(
             },
 
             recv(door_close_rx) -> _ => {
-                println!("Closing doors");
+                // println!("Closing doors");
                 match state.behaviour {
                     Behaviour::DoorOpen => {
                         match () {
                             _ if orders::order_in_direction(&orders, state.floor, state.direction) => {
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 state.behaviour = Behaviour::Moving;
-                                // motorTimer
-                                // motor.c <- false
                                 new_state_tx.send(state.clone()).unwrap();
-                                println!("Case 1");
                                 motor_timer = cbc::never();
-                                // new_state
                             },
                             _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
                                 door_open_tx.send(true).unwrap();
                                 state.direction = direction::direction_opposite(state.direction);
+                                new_state_tx.send(state.clone()).unwrap();
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
+                                println!("Order done 7");
                             },
                             _ if orders::order_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
-                                door_open_tx.send(true).unwrap();
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 state.behaviour = Behaviour::Moving;
-                                // motorTimer
-                                // motor.c <- false
                                 new_state_tx.send(state.clone()).unwrap();
-                                println!("Case 3");
                                 motor_timer = cbc::never();
-                                // new_state
                             },
                             _ => {
                                 state.behaviour = Behaviour::Idle;
-                                println!("Case 4");
-
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::never();
-                                // new_state
                             }
                         }
 
@@ -332,5 +320,13 @@ pub fn elevator_fsm(
                 elevator.stop_button_light(state.emergency_stop);
             }
         }
+    }
+}
+
+pub fn behaviour_to_string(behaviour: Behaviour) -> String {
+    match behaviour {
+        Behaviour::Idle => "idle".to_string(),
+        Behaviour::Moving => "moving".to_string(),
+        Behaviour::DoorOpen => "doorOpen".to_string(),
     }
 }
