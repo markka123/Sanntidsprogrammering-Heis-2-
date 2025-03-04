@@ -5,7 +5,6 @@ use crate::elevio::poll::CallButton;
 use crossbeam_channel as cbc;
 
 pub type Orders = [[bool; 3]; config::ELEV_NUM_FLOORS as usize];
-pub type AssignedOrders = [Orders; config::ELEV_NUM_ELEVATORS as usize];
 pub type HallOrders = [[bool; 2]; config::ELEV_NUM_FLOORS as usize];
 pub type CabOrders = [[bool; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
 
@@ -14,18 +13,18 @@ pub struct AllOrders {
     // Init with: let matrix = Matrix::new(rows, cols, false);
     pub hall_orders: HallOrders,
     pub cab_orders: CabOrders,
-    pub assigned_orders: AssignedOrders,
+    pub offline_orders: Orders,
 }
 
 impl AllOrders {
     pub fn init() -> Self {
         let hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
         let cab_orders = [[false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
-        let assigned_orders = [[[false; 3]; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
+        let offline_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
         Self {
             hall_orders,
             cab_orders,
-            assigned_orders,
+            offline_orders,
         }
     }
     pub fn add_order(&mut self, call_button: CallButton, elevator_id: usize) {
@@ -46,6 +45,10 @@ impl AllOrders {
         } else {
             //Handle error
         }
+    }
+
+    pub fn reset_offline_orders(&mut self) {
+        self.offline_orders= [[false; 3]; config::ELEV_NUM_FLOORS as usize];
     }
 }
 
