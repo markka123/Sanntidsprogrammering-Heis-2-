@@ -102,7 +102,7 @@ pub fn distributor(
      
         // println!("Pending orders: {:#?}", pending_orders.lock().unwrap());
         // sleep(Duration::from_millis(100));
-        select! {
+        cbc::select! {
             recv(message_rx) -> message => {
                 match message {
                     Ok(Message::CallMsg(call_msg)) => {
