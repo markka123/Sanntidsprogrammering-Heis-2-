@@ -73,7 +73,7 @@ pub fn distributor(
     {
         spawn(move || receiver::receiver(
             message_tx,
-            master_activate_tx, 
+            master_activate_tx,
             socket_receiver,
             elevator_id
         ));

@@ -30,7 +30,7 @@ pub fn receiver(
                     master_activate_tx.send(()).unwrap();
                     println!("Id {} is taking over as master because master_id {} died!", elevator_id, master_id);
                 }
-            }
+            },
             default(config::UDP_POLL_PERIOD) => {
                 if let Some((received_message, sender_addr)) = udp::receive_udp_message::<String>(&socket) {
                     //let message = serde_json::from_value::<Message>(received_message);
