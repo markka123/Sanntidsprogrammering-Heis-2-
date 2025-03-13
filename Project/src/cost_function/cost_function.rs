@@ -1,30 +1,9 @@
-// REASSIGNING ALL ORDERS
-
-// INPUT
-// {
-//     "hallRequests" : 
-//         [[Boolean, Boolean], ...],
-//     "states" : 
-//         {
-//             "id_1" : {
-                    
-//                 "behaviour"     : < "idle" | "moving" | "doorOpen" >
-//                 "floor"         : NonNegativeInteger
-//                 "direction"     : < "up" | "down" | "stop" >
-//                 "cabRequests"   : [Boolean, ...]
-//             },
-//             "id_2" : {...}
-//         }
-// }
-
-//Til ANDREAS: Jeg vil ha states som en matrise der hver heis har sin rad (id1 -> rad 1) og de relevante variablene ligger på den raden i rekkefølgen [behaviour, floor, direction], de mulige alternativene står over og her er et eksempel:   let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
-
 #![allow(dead_code)]
 // PACKAGES
 use crate::elevator_controller::orders::{CabOrders, HallOrders};
-use crate::distributor::distributor::{States};
 use crate::elevator_controller::elevator_fsm;
 use crate::elevator_controller::direction;
+use crate::elevator_controller::state;
 
 use std::process::{Command, Stdio};
 use serde_json::{json};
@@ -32,7 +11,7 @@ use num2words::Num2Words;
 
 //ASSIGN_REQUESTS
 pub fn assign_orders(
-    states: &States,
+    states: &state::States,
     cab_requests: &CabOrders,
     hall_requests: &HallOrders,
 ) -> String{
@@ -44,7 +23,7 @@ pub fn assign_orders(
             continue;
         }
         let state_variables = json!({
-            "behaviour": elevator_fsm::behaviour_to_string(state.behaviour),
+            "behaviour": state::behaviour_to_string(state.behaviour),
             "floor": state.floor.to_string(),
             "direction": direction::direction_to_string(state.direction), // fix when an elevator should have dir stop
             "cabRequests": cab_requests[id],

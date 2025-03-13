@@ -3,6 +3,7 @@ use crate::config::config;
 use crate::elevator_controller::direction;
 use crate::elevator_controller::doors;
 use crate::elevator_controller::orders;
+use crate::elevator_controller::state::{State, Behaviour};
 use crate::elevio::elev::{CAB, DIRN_STOP, HALL_DOWN};
 use crate::elevio::{self, elev as e};
 use std::thread::*;
@@ -10,24 +11,6 @@ use serde::{Serialize, Deserialize};
 
 
 use crossbeam_channel as cbc;
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub enum Behaviour {
-    Idle,
-    Moving,
-    DoorOpen,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct State {
-    pub obstructed: bool,
-    pub motorstop: bool,
-    pub offline: bool,
-    pub emergency_stop: bool,
-    pub behaviour: Behaviour,
-    pub floor: u8,
-    pub direction: u8,
-}
 
 pub fn elevator_fsm(
     elevator: &e::Elevator,
@@ -320,13 +303,5 @@ pub fn elevator_fsm(
                 elevator.stop_button_light(state.emergency_stop);
             }
         }
-    }
-}
-
-pub fn behaviour_to_string(behaviour: Behaviour) -> String {
-    match behaviour {
-        Behaviour::Idle => "idle".to_string(),
-        Behaviour::Moving => "moving".to_string(),
-        Behaviour::DoorOpen => "doorOpen".to_string(),
     }
 }

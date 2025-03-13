@@ -26,7 +26,7 @@ fn main() -> std::io::Result<()> {
 
     let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
     let (emergency_reset_tx, emergency_reset_rx) = cbc::unbounded::<bool>();
-    let (new_state_tx, new_state_rx) = cbc::unbounded::<elevator_controller::elevator_fsm::State>();
+    let (new_state_tx, new_state_rx) = cbc::unbounded::<elevator_controller::state::State>();
     let (order_completed_tx, order_completed_rx) = cbc::unbounded::<elevio::poll::CallButton>();
 
     {

@@ -2,7 +2,7 @@
 use crate::config::config;
 use crate::distributor::distributor::{COMPLETED_ORDER, NEW_ORDER};
 use crate::elevio::elev::{CAB, DIRN_STOP, HALL_DOWN};
-use crate::elevator_controller::elevator_fsm::{State, Behaviour};
+use crate::elevator_controller::state::{Behaviour, State};
 use crate::elevio::poll::CallButton;
 use crate::network::udp;
 use crate::distributor::distributor::Message;

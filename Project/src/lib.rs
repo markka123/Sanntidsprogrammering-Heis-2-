@@ -13,6 +13,7 @@ pub mod elevator_controller {
     pub mod elevator_fsm;
     pub mod lights;
     pub mod orders;
+    pub mod state;
 }
 
 pub mod config {

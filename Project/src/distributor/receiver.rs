@@ -8,7 +8,7 @@ use crate::distributor::distributor::{Message};
 use crate::network::udp;
 use crossbeam_channel as cbc;
 use serde::{Deserialize, Serialize};
-use crate::elevator_controller::elevator_fsm::{State, Behaviour};
+use crate::elevator_controller::state::{State, Behaviour};
 use std::net::UdpSocket;
 use std::sync::Arc;
 use serde_json;

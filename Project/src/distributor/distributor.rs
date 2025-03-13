@@ -4,7 +4,7 @@ use crate::distributor::receiver;
 use crate::distributor::transmitter;
 use crate::elevator_controller::direction;
 use crate::elevator_controller::elevator_fsm;
-use crate::elevator_controller::elevator_fsm::State;
+use crate::elevator_controller::state;
 use crate::elevator_controller::lights;
 use crate::elevator_controller::orders;
 use crate::elevator_controller::orders::AllOrders;
@@ -29,19 +29,18 @@ use std::sync::Mutex;
 #[serde(tag = "type", content = "data")]
 pub enum Message {
     CallMsg((u8, [u8; 3])),
-    StateMsg((u8, State)),
+    StateMsg((u8, state::State)),
     AllAssignedOrdersMsg((u8, Value)),
 }
 
 pub const NEW_ORDER: u8 = 0;
 pub const COMPLETED_ORDER: u8 = 1;
-pub type States = [elevator_fsm::State; config::ELEV_NUM_ELEVATORS as usize];
 
 
 pub fn distributor(
     elevator: &e::Elevator,
     elevator_id: u8,
-    new_state_rx: cbc::Receiver<State>,
+    new_state_rx: cbc::Receiver<state::State>,
     order_completed_rx: cbc::Receiver<CallButton>,
     new_order_tx: cbc::Sender<orders::Orders>,
 ) {
@@ -61,7 +60,16 @@ pub fn distributor(
     let socket = udp::create_udp_socket().expect("Failed to create UDP socket");
     let socket_receiver = Arc::clone(&socket);
     let socket_transmitter = Arc::clone(&socket);
-    let mut states:States = create_states();
+    
+    let mut states: state::States = std::array::from_fn(|_| state::State {
+        obstructed: false,
+        motorstop: false,
+        offline: false,
+        emergency_stop: false,
+        behaviour: state::Behaviour::Idle,
+        floor: 0,
+        direction: e::HALL_DOWN,
+    });
 
     let (message_tx, message_rx) = cbc::unbounded::<Message>();
     let (is_online_tx, is_online_rx) = cbc::unbounded::<bool>();
@@ -248,16 +256,4 @@ pub fn distributor(
             }
         }
     }
-}
-
-pub fn create_states() -> States {
-    std::array::from_fn(|_| elevator_fsm::State {
-        obstructed: false,
-        motorstop: false,
-        offline: false,
-        emergency_stop: false,
-        behaviour: elevator_fsm::Behaviour::Idle,
-        floor: 0,
-        direction: e::HALL_DOWN,
-    })
 }
