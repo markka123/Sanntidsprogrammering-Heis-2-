@@ -23,6 +23,7 @@ pub fn transmitter(
     let mut state = State {
         obstructed: false,
         motorstop: false,
+        offline: false,
         emergency_stop: false,
         behaviour: Behaviour::Idle,
         floor: 0,

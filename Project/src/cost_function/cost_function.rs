@@ -40,7 +40,7 @@ pub fn assign_orders(
     let mut states_map = serde_json::Map::new();
 
     for (id, state) in states.iter().enumerate() {
-        if state.motorstop || state.emergency_stop || state.obstructed {
+        if state.motorstop || state.emergency_stop || state.obstructed || state.offline {
             continue;
         }
         let state_variables = json!({

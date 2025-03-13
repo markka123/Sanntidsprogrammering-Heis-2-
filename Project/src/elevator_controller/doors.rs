@@ -19,13 +19,14 @@ pub fn door(
     loop {
         cbc::select! {
             recv(door_open_rx) -> _ => {
-                is_door_open = true;
+                println!("Door open");
                 elevator.door_light(true);
                 if is_obstructed {
                     door_timer = cbc::never();
                 }
-                else {
-                    door_timer = cbc::after(config::DOOR_TIMER_DURATION);   
+                else if !is_door_open {
+                    is_door_open = true;
+                    door_timer = cbc::after(config::DOOR_TIMER_DURATION);
                 }
             },
             recv(obstruction_rx) -> a => {
@@ -42,6 +43,7 @@ pub fn door(
             },
 
             recv(door_timer) -> _ => {
+                println!("Door closed");
                 is_door_open = false;
                 elevator.door_light(false);
                 door_close_tx.send(true).unwrap();

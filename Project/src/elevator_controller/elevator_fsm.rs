@@ -22,6 +22,7 @@ pub enum Behaviour {
 pub struct State {
     pub obstructed: bool,
     pub motorstop: bool,
+    pub offline: bool,
     pub emergency_stop: bool,
     pub behaviour: Behaviour,
     pub floor: u8,
@@ -38,6 +39,7 @@ pub fn elevator_fsm(
     let mut state = State {
         obstructed: false,
         motorstop: false,
+        offline: false,
         emergency_stop: false,
         behaviour: Behaviour::Idle,
         floor: 0,
@@ -104,7 +106,7 @@ pub fn elevator_fsm(
                                 orders[state.floor as usize][CAB as usize] => {
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                                //println!("Order done 1");
+                                println!("Order done 1");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -113,7 +115,7 @@ pub fn elevator_fsm(
                                 state.direction = direction::direction_opposite(state.direction);
                                 new_state_tx.send(state.clone()).unwrap();
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                                //println!("Order done 2");
+                                println!("Order done 2");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -145,9 +147,9 @@ pub fn elevator_fsm(
                     },
                     Behaviour::DoorOpen => {
                         if orders[state.floor as usize][CAB as usize] || orders[state.floor as usize][state.direction as usize] {
-                            door_open_tx.send(true).unwrap();
+                            // door_open_tx.send(true).unwrap();
                             orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                            //println!("Order done 3");
+                            println!("order done 3");
                         }
                     },
                     Behaviour::Moving => {
@@ -174,7 +176,7 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                //println!("Order done 4");
+                                println!("Order done 4");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -183,7 +185,7 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                //println!("Order done 5");
+                                println!("Order done 5");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -192,7 +194,7 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                //println!("Order done 6");
+                                println!("Order done 6");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -205,7 +207,7 @@ pub fn elevator_fsm(
                                 door_open_tx.send(true).unwrap();
                                 state.direction = direction::direction_opposite(state.direction);
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                //println!("Order done 7");
+                                println!("Order done 7");
                                 state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -247,7 +249,7 @@ pub fn elevator_fsm(
                                 state.direction = direction::direction_opposite(state.direction);
                                 new_state_tx.send(state.clone()).unwrap();
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                                //println!("Order done 7");
+                                println!("Order done 7");
                             },
                             _ if orders::order_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
                                 state.direction = direction::direction_opposite(state.direction);

@@ -47,13 +47,15 @@ pub fn distributor(
 ) {
     let mut all_orders = AllOrders::init();
     let mut offline_orders: orders::Orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
-
-    let mut master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
-
     let pending_orders: Arc<Mutex<Vec<(u8, CallButton)>>> = Arc::new(Mutex::new(Vec::new()));
-    let pending_orders_clone = Arc::clone(&pending_orders);
 
+    let mut master_id = config::ELEV_NUM_ELEVATORS;
     let mut is_online = true;
+    let mut last_received_heartbeat = [Instant::now(); config::ELEV_NUM_ELEVATORS as usize];
+    
+    let mut master_ticker = cbc::never();
+    let lights_ticker = cbc::tick(config::SET_LIGHTS_PERIOD);
+    let check_slaves_heartbeat_ticker = cbc::tick(config::NETWORK_TIMER_DURATION);
 
 
     let socket = udp::create_udp_socket().expect("Failed to create UDP socket");
@@ -85,6 +87,8 @@ pub fn distributor(
             elevator_id
         ));
     }
+
+    let pending_orders_clone = Arc::clone(&pending_orders);
     {
         spawn(move || {
             transmitter::transmitter(
@@ -97,13 +101,7 @@ pub fn distributor(
             )
         });
     }
-
-    let mut all_orders = AllOrders::init();
     
-    let mut master_ticker = cbc::never();
-    let lights_ticker = cbc::tick(config::SET_LIGHTS_PERIOD);
-    
-
     loop {
         select! {
             recv(call_button_rx) -> call_button => {
@@ -150,12 +148,19 @@ pub fn distributor(
                     },
                     Ok(Message::StateMsg(state_msg)) => {
                         let (id, state) = state_msg;
+                        
+                        if states[id as usize].offline {
+                            println!("Elevator {} has come online again", id);
+                            states[id as usize].offline = false;
+                        }
+                        
                         states[id as usize] = state;
+                        last_received_heartbeat[id as usize] = Instant::now();
                     },
                     Ok(Message::AllAssignedOrdersMsg((master_id, all_assigned_orders_str))) => {
 
                         let all_assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_value(all_assigned_orders_str).unwrap();
-                        if !(states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed) {
+                        if !(states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed || states[elevator_id as usize].offline) {
                             if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
                                 new_order_tx.send(*assigned_orders).unwrap();
                                 // println!("ID found");
@@ -197,6 +202,11 @@ pub fn distributor(
             },
             recv(master_activate_rx) -> _ => {
                 master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
+                // Merge motorstop obstruction and emergency stop into a "disconnected/unavailible" variable?
+                if (master_id as usize) < config::ELEV_NUM_ELEVATORS as usize { 
+                    states[master_id as usize].offline = true; 
+                }
+                master_id = elevator_id;
             },
             recv(master_ticker) -> _ => {
                 let assigned_orders_str = cost_function::assign_orders(&states, &all_orders.cab_orders, &all_orders.hall_orders);
@@ -204,7 +214,18 @@ pub fn distributor(
             },
             recv(lights_ticker) -> _ => {
                 lights::set_lights(&all_orders, elevator.clone(), elevator_id);
-            }
+            },
+            recv(check_slaves_heartbeat_ticker) -> _ => {
+                let now = Instant::now();
+                for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
+                    if now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION {
+                        if !states[id].offline {
+                            println!("Elevator {} has gone offline", id);
+                            states[id].offline = true; // change to one "disconnected/unavailable" state?
+                        }
+                    }
+                }
+            },
             recv(is_online_rx) -> is_online_msg => {
                 let network_status = is_online_msg.unwrap();
                 if network_status && !is_online {
@@ -233,6 +254,7 @@ pub fn create_states() -> States {
     std::array::from_fn(|_| elevator_fsm::State {
         obstructed: false,
         motorstop: false,
+        offline: false,
         emergency_stop: false,
         behaviour: elevator_fsm::Behaviour::Idle,
         floor: 0,

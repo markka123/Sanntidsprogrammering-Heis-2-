@@ -29,7 +29,7 @@ pub fn receiver(
         cbc::select! {
             recv(master_timer) -> _ => {
                 if elevator_id == master_id + 1 || (elevator_id == 0 && master_id >= config::ELEV_NUM_ELEVATORS - 1) {
-                    master_activate_tx.send(()).unwrap();
+                    master_activate_tx.send(true).unwrap();
                     println!("Id {} is taking over as master because master_id {} died!", elevator_id, master_id);
                 }
             },
