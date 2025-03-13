@@ -101,13 +101,10 @@ pub fn distributor(
     let mut all_orders = AllOrders::init();
     
     let mut master_ticker = cbc::never();
-    if elevator_id == 0 {
-        master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
-    }
+    let lights_ticker = cbc::tick(config::SET_LIGHTS_PERIOD);
     
 
     loop {
-        lights::set_lights(&all_orders, elevator.clone(), elevator_id);
         select! {
             recv(call_button_rx) -> call_button => {
                 let call_button = call_button.unwrap();
@@ -161,6 +158,7 @@ pub fn distributor(
                         if !(states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed) {
                             if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
                                 new_order_tx.send(*assigned_orders).unwrap();
+                                // println!("ID found");
                             } else {
                             }
                         }
@@ -204,6 +202,9 @@ pub fn distributor(
                 let assigned_orders_str = cost_function::assign_orders(&states, &all_orders.cab_orders, &all_orders.hall_orders);
                 master_transmit_tx.send(assigned_orders_str).unwrap();
             },
+            recv(lights_ticker) -> _ => {
+                lights::set_lights(&all_orders, elevator.clone(), elevator_id);
+            }
             recv(is_online_rx) -> is_online_msg => {
                 let network_status = is_online_msg.unwrap();
                 if network_status && !is_online {

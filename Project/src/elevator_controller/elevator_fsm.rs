@@ -51,7 +51,7 @@ pub fn elevator_fsm(
     let (obstructed_tx, obstructed_rx) = cbc::unbounded::<bool>();
     let (motorstop_tx, motorstop_rx) = cbc::unbounded::<bool>();
     let mut motor_timer = cbc::never();
-
+    
     let (floor_sensor_tx, floor_sensor_rx) = cbc::unbounded::<u8>();
     {
         let elevator = elevator.clone();
@@ -284,7 +284,9 @@ pub fn elevator_fsm(
                 let is_motorstop = a.unwrap();
                 if state.motorstop != is_motorstop {
                     state.motorstop = is_motorstop;
-                    //println!("{}", if state.motorstop { "Lost motor power!" } else { "Regained motor power!" } );
+                    println!("{}", if state.motorstop { "Lost motor power!" } else { "Regained motor power!" } );
+                    new_state_tx.send(state.clone()).unwrap();
+                    
                 }
             },
 
@@ -293,6 +295,7 @@ pub fn elevator_fsm(
                 //println!("\nObstructed: {:#?}\n\n", is_obstructed);
                 if is_obstructed != state.obstructed {
                     state.obstructed = is_obstructed;
+                    new_state_tx.send(state.clone()).unwrap();
                 }
             },
 
@@ -305,10 +308,12 @@ pub fn elevator_fsm(
                     elevator.motor_direction(DIRN_STOP);
                     motor_timer = cbc::never();
                     state.behaviour = Behaviour::Idle;
+                    new_state_tx.send(state.clone()).unwrap();
                 }
                 else if is_emergency_stop && state.emergency_stop {
                     state.emergency_stop = false;
                     emergency_reset_tx.send(true).unwrap();
+                    new_state_tx.send(state.clone()).unwrap();
                 }
                 elevator.stop_button_light(state.emergency_stop);
             }
