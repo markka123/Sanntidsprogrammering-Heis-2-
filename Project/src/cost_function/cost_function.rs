@@ -1,24 +1,3 @@
-// REASSIGNING ALL ORDERS
-
-// INPUT
-// {
-//     "hallRequests" : 
-//         [[Boolean, Boolean], ...],
-//     "states" : 
-//         {
-//             "id_1" : {
-                    
-//                 "behaviour"     : < "idle" | "moving" | "doorOpen" >
-//                 "floor"         : NonNegativeInteger
-//                 "direction"     : < "up" | "down" | "stop" >
-//                 "cabRequests"   : [Boolean, ...]
-//             },
-//             "id_2" : {...}
-//         }
-// }
-
-//Til ANDREAS: Jeg vil ha states som en matrise der hver heis har sin rad (id1 -> rad 1) og de relevante variablene ligger på den raden i rekkefølgen [behaviour, floor, direction], de mulige alternativene står over og her er et eksempel:   let elevator_variables = vec![vec!["moving".to_string(), "2".to_string(), "up".to_string()]];
-
 #![allow(dead_code)]
 // PACKAGES
 use crate::elevator_controller::orders::{CabOrders, HallOrders};
