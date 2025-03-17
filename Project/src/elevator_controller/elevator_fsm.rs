@@ -17,8 +17,7 @@ pub fn elevator_fsm(
     elevator: &e::Elevator,
     new_order_rx: cbc::Receiver<(orders::Orders, orders::HallOrders)>,
     order_completed_tx: cbc::Sender<elevio::poll::CallButton>,
-    emergency_reset_tx: cbc::Sender<bool>,
-    new_state_tx: &cbc::Sender<State>,
+    new_state_tx: cbc::Sender<State>,
 ) {
     let mut state = State {
         obstructed: false,
@@ -282,7 +281,6 @@ pub fn elevator_fsm(
                 }
                 else if is_emergency_stop && state.emergency_stop {
                     state.emergency_stop = false;
-                    emergency_reset_tx.send(true).unwrap();
                     new_state_tx.send(state.clone()).unwrap();
                 }
                 elevator.stop_button_light(state.emergency_stop);

@@ -46,6 +46,8 @@ pub fn distributor(
     let mut all_orders = AllOrders::init();
     let mut offline_orders: orders::Orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
     let pending_orders: Arc<Mutex<Vec<(u8, CallButton)>>> = Arc::new(Mutex::new(Vec::new()));
+    let mut assigned_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
+    let mut all_hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
 
     let mut master_id = config::ELEV_NUM_ELEVATORS;
     let mut is_online = true;
@@ -166,13 +168,17 @@ pub fn distributor(
                     Ok(Message::AllAssignedOrdersMsg((master_id, all_assigned_orders_str))) => {
 
                         let all_assigned_orders_map: HashMap<u8, orders::Orders> = serde_json::from_value(all_assigned_orders_str).unwrap();
-                        let all_hall_orders = get_all_hall_orders(&all_assigned_orders_map);
+                        let new_all_hall_orders = get_all_hall_orders(&all_assigned_orders_map);
 
                         let elevator_is_availible = states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed || states[elevator_id as usize].offline;
 
                         if !elevator_is_availible {
-                            if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
-                                new_order_tx.send((*assigned_orders, all_hall_orders)).unwrap();
+                            if let Some(new_assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
+                                if (*new_assigned_orders != assigned_orders)  || (new_all_hall_orders != all_hall_orders) {
+                                    assigned_orders = *new_assigned_orders;
+                                    all_hall_orders = new_all_hall_orders;
+                                    new_order_tx.send((*assigned_orders, all_hall_orders)).unwrap();
+                                }
                                 // println!("ID found");
                             } else {
                             }
