@@ -5,7 +5,6 @@ use crate::distributor::transmitter;
 use crate::elevator_controller::direction;
 use crate::elevator_controller::elevator_fsm;
 use crate::elevator_controller::state;
-use crate::elevator_controller::lights;
 use crate::elevator_controller::orders;
 use crate::elevator_controller::orders::AllOrders;
 use crate::elevio::elev as e;
@@ -42,7 +41,7 @@ pub fn distributor(
     elevator_id: u8,
     new_state_rx: cbc::Receiver<state::State>,
     order_completed_rx: cbc::Receiver<CallButton>,
-    new_order_tx: cbc::Sender<orders::Orders>,
+    new_order_tx: cbc::Sender<(orders::Orders, orders::HallOrders)>,
 ) {
     let mut all_orders = AllOrders::init();
     let mut offline_orders: orders::Orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
@@ -53,7 +52,6 @@ pub fn distributor(
     let mut last_received_heartbeat = [Instant::now(); config::ELEV_NUM_ELEVATORS as usize];
     
     let mut master_ticker = cbc::never();
-    let lights_ticker = cbc::tick(config::SET_LIGHTS_PERIOD);
     let check_slaves_heartbeat_ticker = cbc::tick(config::NETWORK_TIMER_DURATION);
 
 
@@ -118,7 +116,7 @@ pub fn distributor(
                 
                 if !is_online {
                     offline_orders[call_button.floor as usize][call_button.call as usize] = true;
-                    new_order_tx.send(offline_orders).unwrap();
+                    new_order_tx.send((offline_orders, all_orders.hall_orders)).unwrap();
                 }
                 call_msg_tx.send((msg_type, call_button)).unwrap();
             },
@@ -129,7 +127,7 @@ pub fn distributor(
                 if !is_online {
                     offline_orders[order_completed.floor as usize][order_completed.call as usize] = false;
                     pending_orders.lock().unwrap().retain(|(msg, order)| *msg != msg_type || order.floor != order_completed.floor || order.call != order_completed.call);
-                    new_order_tx.send(offline_orders).unwrap(); 
+                    new_order_tx.send((offline_orders, all_orders.hall_orders)).unwrap(); 
                 }
                 call_msg_tx.send((msg_type, order_completed)).unwrap();
             },
@@ -167,10 +165,14 @@ pub fn distributor(
                     },
                     Ok(Message::AllAssignedOrdersMsg((master_id, all_assigned_orders_str))) => {
 
-                        let all_assigned_orders_map: HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]> = serde_json::from_value(all_assigned_orders_str).unwrap();
-                        if !(states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed || states[elevator_id as usize].offline) {
+                        let all_assigned_orders_map: HashMap<u8, orders::Orders> = serde_json::from_value(all_assigned_orders_str).unwrap();
+                        let all_hall_orders = get_all_hall_orders(&all_assigned_orders_map);
+
+                        let elevator_is_availible = states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed || states[elevator_id as usize].offline;
+
+                        if !elevator_is_availible {
                             if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
-                                new_order_tx.send(*assigned_orders).unwrap();
+                                new_order_tx.send((*assigned_orders, all_hall_orders)).unwrap();
                                 // println!("ID found");
                             } else {
                             }
@@ -220,9 +222,6 @@ pub fn distributor(
                 let assigned_orders_str = cost_function::assign_orders(&states, &all_orders.cab_orders, &all_orders.hall_orders);
                 master_transmit_tx.send(assigned_orders_str).unwrap();
             },
-            recv(lights_ticker) -> _ => {
-                lights::set_lights(&all_orders, elevator.clone(), elevator_id);
-            },
             recv(check_slaves_heartbeat_ticker) -> _ => {
                 let now = Instant::now();
                 for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
@@ -251,9 +250,22 @@ pub fn distributor(
                         floor += 1;  
                     }
                     is_online = false;
-                    new_order_tx.send(offline_orders).unwrap();
+                    new_order_tx.send((offline_orders, all_orders.hall_orders)).unwrap();
                 }
             }
         }
     }
+}
+
+fn get_all_hall_orders(map: &HashMap<u8, orders::Orders>) -> orders::HallOrders {
+    let mut all_hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
+
+    for orders in map.values() {
+        for (floor, call) in orders.iter().enumerate() {
+            all_hall_orders[floor][0] |= call[0];
+            all_hall_orders[floor][1] |= call[1];
+        }
+    }
+    
+    all_hall_orders
 }

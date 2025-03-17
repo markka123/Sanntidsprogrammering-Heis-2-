@@ -3,6 +3,7 @@ use crate::config::config;
 use crate::elevator_controller::direction;
 use crate::elevator_controller::doors;
 use crate::elevator_controller::orders;
+use crate::elevator_controller::lights;
 use crate::elevator_controller::state::{State, Behaviour};
 use crate::elevio::elev::{CAB, DIRN_STOP, HALL_DOWN};
 use crate::elevio::{self, elev as e};
@@ -14,7 +15,7 @@ use crossbeam_channel as cbc;
 
 pub fn elevator_fsm(
     elevator: &e::Elevator,
-    new_order_rx: cbc::Receiver<orders::Orders>,
+    new_order_rx: cbc::Receiver<(orders::Orders, orders::HallOrders)>,
     order_completed_tx: cbc::Sender<elevio::poll::CallButton>,
     emergency_reset_tx: cbc::Sender<bool>,
     new_state_tx: &cbc::Sender<State>,
@@ -30,12 +31,15 @@ pub fn elevator_fsm(
     };
 
     let mut orders: orders::Orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
+    let mut all_hall_orders: orders::HallOrders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
+
+    let mut motor_timer = cbc::never();
+    let lights_ticker = cbc::tick(config::SET_LIGHTS_PERIOD);
 
     let (door_open_tx, door_open_rx) = cbc::unbounded::<bool>();
     let (door_close_tx, door_close_rx) = cbc::unbounded::<bool>();
     let (obstructed_tx, obstructed_rx) = cbc::unbounded::<bool>();
     let (motorstop_tx, motorstop_rx) = cbc::unbounded::<bool>();
-    let mut motor_timer = cbc::never();
     
     let (floor_sensor_tx, floor_sensor_rx) = cbc::unbounded::<u8>();
     {
@@ -74,9 +78,11 @@ pub fn elevator_fsm(
 
     loop {
         cbc::select! {
-            recv(new_order_rx) -> a => {
-                let new_orders = a.unwrap();
-                orders = new_orders;
+            recv(lights_ticker) -> _ => {
+                lights::new_set_lights(&orders, &all_hall_orders, elevator.clone());
+            },
+            recv(new_order_rx) -> new_order_tuple => {
+                (orders, all_hall_orders) = new_order_tuple.unwrap();
 
                 if state.emergency_stop {
                     continue;
@@ -141,8 +147,8 @@ pub fn elevator_fsm(
                 }
             },
 
-            recv(floor_sensor_rx) -> a => {
-                let floor = a.unwrap();
+            recv(floor_sensor_rx) -> floor_msg => {
+                let floor = floor_msg.unwrap();
                 motor_timer = cbc::never();
                 motorstop_tx.send(false).unwrap();
                 state.floor = floor;
@@ -265,8 +271,8 @@ pub fn elevator_fsm(
                 motorstop_tx.send(true).unwrap();
             },
 
-            recv(motorstop_rx) -> a => {
-                let is_motorstop = a.unwrap();
+            recv(motorstop_rx) -> motorstop_msg => {
+                let is_motorstop = motorstop_msg.unwrap();
                 if state.motorstop != is_motorstop {
                     state.motorstop = is_motorstop;
                     println!("{}", if state.motorstop { "Lost motor power!" } else { "Regained motor power!" } );
