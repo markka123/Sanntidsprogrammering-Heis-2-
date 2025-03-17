@@ -12,7 +12,7 @@ use driver_rust::network::udp;
 use std::thread::*;
 use std::env;
 
-fn main() -> () {
+fn main() -> std::io::Result<()> {
     
     let (port, elevator_id) = fetch_command_line_args();
 
@@ -21,7 +21,6 @@ fn main() -> () {
     let elevator = e::Elevator::init(&addr, config::ELEV_NUM_FLOORS)?;
 
     let (new_order_tx, new_order_rx) = cbc::unbounded::<orders::Orders>();
-    let (emergency_reset_tx, emergency_reset_rx) = cbc::unbounded::<bool>();
     let (new_state_tx, new_state_rx) = cbc::unbounded::<elevator_controller::state::State>();
     let (order_completed_tx, order_completed_rx) = cbc::unbounded::<elevio::poll::CallButton>();
 
@@ -32,7 +31,6 @@ fn main() -> () {
                 &elevator,
                 new_order_rx,
                 order_completed_tx,
-                emergency_reset_tx,
                 &new_state_tx,
             )
         });
@@ -50,6 +48,8 @@ fn main() -> () {
             )
         });
     }
+
+    Ok(())
 }
 
 
@@ -61,29 +61,13 @@ pub fn fetch_command_line_args() -> (u16, u8) {
 
     let command_line_args: Vec<String> = env::args().collect();
 
-    let port = if command_line_args.len() > 1 {
-        match command_line_args[1].parse::<u16>() {
-            Ok(p) => p,
-            Err(_) => {
-                //println!("Warning: Invalid port provided. Using default: {}", default_port);
-                default_port
-            }
-        }
-    } else {
-        default_port
-    };
+    let port = command_line_args.get(1)
+        .and_then(|s| s.parse::<u16>().ok())
+        .unwrap_or(default_port);
 
-    let elevator_id = if command_line_args.len() > 2 {
-        match command_line_args[2].parse::<u8>() {
-            Ok(id) => id,
-            Err(_) => {
-                //println!("Warning: Invalid elevator ID provided. Using default: {}", default_elevator_id);
-                default_elevator_id
-            }
-        }
-    } else {
-        default_elevator_id
-    };
+    let elevator_id = command_line_args.get(2)
+        .and_then(|s| s.parse::<u8>().ok())
+        .unwrap_or(default_elevator_id);
 
     (port, elevator_id)
 }
