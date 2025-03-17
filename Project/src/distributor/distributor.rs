@@ -37,14 +37,13 @@ pub fn distributor(
     elevator_id: u8,
     new_state_rx: cbc::Receiver<state::State>,
     order_completed_rx: cbc::Receiver<poll::CallButton>,
-    new_order_tx: cbc::Sender<orders::Orders>,
+    new_order_tx: cbc::Sender<(orders::Orders, orders::HallOrders)>,
 ) {
     //TODO: REVIEW IF INITS CAN BE CLEANED UP: (Init function?)
 
     let mut all_orders = orders::AllOrders::init();
     let mut offline_orders: orders::Orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
     let unconfirmed_orders: Arc<Mutex<Vec<(u8, poll::CallButton)>>> = Arc::new(Mutex::new(Vec::new()));
-    let pending_orders: Arc<Mutex<Vec<(u8, CallButton)>>> = Arc::new(Mutex::new(Vec::new()));
     let mut assigned_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
     let mut all_hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
 
@@ -177,7 +176,7 @@ pub fn distributor(
                                 if (*new_assigned_orders != assigned_orders)  || (new_all_hall_orders != all_hall_orders) {
                                     assigned_orders = *new_assigned_orders;
                                     all_hall_orders = new_all_hall_orders;
-                                    new_order_tx.send((*assigned_orders, all_hall_orders)).unwrap();
+                                    new_order_tx.send((assigned_orders, all_hall_orders)).unwrap();
                                 }
                             } 
                         }
