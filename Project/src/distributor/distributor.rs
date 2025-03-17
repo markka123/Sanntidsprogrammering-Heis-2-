@@ -1,29 +1,25 @@
+// TODO: FIX IMPORTS
 #![allow(dead_code)]
 use crate::config::config;
 use crate::distributor::receiver;
 use crate::distributor::transmitter;
-use crate::elevator_controller::direction;
-use crate::elevator_controller::elevator_fsm;
 use crate::elevator_controller::state;
 use crate::elevator_controller::orders;
-use crate::elevator_controller::orders::AllOrders;
 use crate::elevio::elev as e;
 use crate::elevio::poll;
-use crate::elevio::poll::CallButton;
 use crate::network::udp;
 use crate::cost_function::cost_function;
 
 use crossbeam_channel as cbc;
-use crossbeam_channel::select;
-use std::array;
 use std::sync::Arc;
 use std::thread::*;
 use std::time::*;
-use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+
+// TODO: FIND OUT WHERE THESE SHOULD BE:
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
 pub enum Message {
@@ -40,11 +36,14 @@ pub fn distributor(
     elevator: &e::Elevator,
     elevator_id: u8,
     new_state_rx: cbc::Receiver<state::State>,
-    order_completed_rx: cbc::Receiver<CallButton>,
-    new_order_tx: cbc::Sender<(orders::Orders, orders::HallOrders)>,
+    order_completed_rx: cbc::Receiver<poll::CallButton>,
+    new_order_tx: cbc::Sender<orders::Orders>,
 ) {
-    let mut all_orders = AllOrders::init();
+    //TODO: REVIEW IF INITS CAN BE CLEANED UP: (Init function?)
+
+    let mut all_orders = orders::AllOrders::init();
     let mut offline_orders: orders::Orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
+    let unconfirmed_orders: Arc<Mutex<Vec<(u8, poll::CallButton)>>> = Arc::new(Mutex::new(Vec::new()));
     let pending_orders: Arc<Mutex<Vec<(u8, CallButton)>>> = Arc::new(Mutex::new(Vec::new()));
     let mut assigned_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
     let mut all_hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
@@ -75,8 +74,8 @@ pub fn distributor(
     let (is_online_tx, is_online_rx) = cbc::unbounded::<bool>();
     let (master_transmit_tx, master_transmit_rx) = cbc::unbounded::<String>();
     let (master_activate_tx, master_activate_rx) = cbc::unbounded::<bool>();
-    let (call_button_tx, call_button_rx) = cbc::unbounded::<CallButton>();
-    let (call_msg_tx, call_msg_rx) = cbc::unbounded::<(u8, CallButton)>();
+    let (call_button_tx, call_button_rx) = cbc::unbounded::<poll::CallButton>();
+    let (call_msg_tx, call_msg_rx) = cbc::unbounded::<(u8, poll::CallButton)>();
     let (is_online_tx, is_online_rx) = cbc::unbounded::<bool>();
 
 
@@ -96,7 +95,7 @@ pub fn distributor(
         ));
     }
 
-    let pending_orders_clone = Arc::clone(&pending_orders);
+    let unconfirmed_orders_clone = Arc::clone(&unconfirmed_orders);
     {
         spawn(move || {
             transmitter::transmitter(
@@ -104,14 +103,14 @@ pub fn distributor(
                 new_state_rx,
                 master_transmit_rx,
                 call_msg_rx,
-                pending_orders_clone,
+                unconfirmed_orders_clone,
                 socket_transmitter,
             )
         });
     }
     
     loop {
-        select! {
+        cbc::select! {
             recv(call_button_rx) -> call_button => {
                 let call_button = call_button.unwrap();
                 let msg_type = NEW_ORDER;
@@ -128,7 +127,7 @@ pub fn distributor(
                 
                 if !is_online {
                     offline_orders[order_completed.floor as usize][order_completed.call as usize] = false;
-                    pending_orders.lock().unwrap().retain(|(msg, order)| *msg != msg_type || order.floor != order_completed.floor || order.call != order_completed.call);
+                    unconfirmed_orders.lock().unwrap().retain(|(msg, order)| *msg != msg_type || order.floor != order_completed.floor || order.call != order_completed.call);
                     new_order_tx.send((offline_orders, all_orders.hall_orders)).unwrap(); 
                 }
                 call_msg_tx.send((msg_type, order_completed)).unwrap();
@@ -138,7 +137,7 @@ pub fn distributor(
                     Ok(Message::CallMsg(call_msg)) => {
                         let (id, msg_array) = call_msg;
                         let msg_type = msg_array[0];
-                        let new_order = CallButton{
+                        let new_order = poll::CallButton{
                             floor: msg_array[1],
                             call: msg_array[2],
                         };
@@ -168,6 +167,7 @@ pub fn distributor(
                     Ok(Message::AllAssignedOrdersMsg((master_id, all_assigned_orders_str))) => {
 
                         let all_assigned_orders_map: HashMap<u8, orders::Orders> = serde_json::from_value(all_assigned_orders_str).unwrap();
+
                         let new_all_hall_orders = get_all_hall_orders(&all_assigned_orders_map);
 
                         let elevator_is_availible = states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed || states[elevator_id as usize].offline;
@@ -179,46 +179,17 @@ pub fn distributor(
                                     all_hall_orders = new_all_hall_orders;
                                     new_order_tx.send((*assigned_orders, all_hall_orders)).unwrap();
                                 }
-                                // println!("ID found");
-                            } else {
-                            }
+                            } 
                         }
-                        pending_orders.lock().unwrap().retain(|(order_type, order)| {
-                            if order.call == e::HALL_UP || order.call == e::HALL_DOWN {
-                                if *order_type == NEW_ORDER {
-                                    let assigned_any = all_assigned_orders_map.iter().any(|(_, assigned_orders)| {
-                                        assigned_orders[order.floor as usize][order.call as usize]
-                                    });
-                                    return !assigned_any;      
-                                }
-                                else if *order_type == COMPLETED_ORDER {
-                                    let not_assigned_any = all_assigned_orders_map.iter().all(|(_, assigned_orders)| {
-                                        !assigned_orders[order.floor as usize][order.call as usize]
-                                    });
-                                    return not_assigned_any;
-                                }
-                            }
-                            else if order.call == e::CAB {
-                                if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
-                                    if (assigned_orders[order.floor as usize][order.call as usize] && *order_type == NEW_ORDER) 
-                                    || (!assigned_orders[order.floor as usize][order.call as usize] && *order_type == COMPLETED_ORDER) {
-                                        // //println!("Poped from pending orders");
-                                        return false;
-                                    }
-                                }
-                            } return true;
-                            
-                        });
+                        confirm_orders(&unconfirmed_orders, &all_assigned_orders_map, elevator_id);                        
                     }
                     Err(e) => {
-                        //eprintln!("Received message of unexpected format");
-                        //eprintln!("{:#?}", e);
                     }
                 }
             },
             recv(master_activate_rx) -> _ => {
                 master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
-                // Merge motorstop obstruction and emergency stop into a "disconnected/unavailible" variable?
+                // TODO: Review if we should merge motorstop obstruction and emergency stop into a "disconnected/unavailible" variable
                 if (master_id as usize) < config::ELEV_NUM_ELEVATORS as usize { 
                     states[master_id as usize].offline = true; 
                 }
@@ -245,7 +216,7 @@ pub fn distributor(
                     offline_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
                     is_online = true;
                 } else if !network_status && is_online {
-                    for (order_type, order) in pending_orders.lock().unwrap().iter() {
+                    for (order_type, order) in unconfirmed_orders.lock().unwrap().iter() {
                         if *order_type == NEW_ORDER {
                             offline_orders[order.floor as usize][order.call as usize] = true;
                         } 
@@ -274,4 +245,36 @@ fn get_all_hall_orders(map: &HashMap<u8, orders::Orders>) -> orders::HallOrders 
     }
     
     all_hall_orders
+}
+
+// TODO: Where should this be placed? (orders.rs?)
+
+fn confirm_orders(
+    unconfirmed_orders: &Arc<Mutex<Vec<(u8, poll::CallButton)>>>,
+    all_assigned_orders_map: &HashMap<u8, [[bool; 3]; config::ELEV_NUM_FLOORS as usize]>, 
+    elevator_id: u8,
+) {
+    unconfirmed_orders.lock().unwrap().retain(|(order_type, order)| {
+        let order_is_assigned = |floor: usize, call: usize| 
+            all_assigned_orders_map.iter().any(|(_, assigned_orders)| assigned_orders[floor][call]);
+
+        let order_is_unassigned = |floor: usize, call: usize| 
+            all_assigned_orders_map.iter().all(|(_, assigned_orders)| !assigned_orders[floor][call]);
+
+        match order.call {
+            e::HALL_UP | e::HALL_DOWN => match order_type {
+                &NEW_ORDER => !order_is_assigned(order.floor as usize, order.call as usize),
+                &COMPLETED_ORDER => order_is_unassigned(order.floor as usize, order.call as usize),
+                _ => true,
+            },
+            e::CAB => {
+                if let Some(assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
+                    let cab_is_assigned = assigned_orders[order.floor as usize][order.call as usize];
+                    return !((cab_is_assigned && *order_type == NEW_ORDER) || (!cab_is_assigned && *order_type == COMPLETED_ORDER));
+                }
+                true
+            }
+            _ => true,
+        }
+    });
 }

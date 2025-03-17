@@ -4,12 +4,11 @@ use driver_rust::distributor;
 use driver_rust::elevator_controller;
 use driver_rust::elevator_controller::lights;
 use driver_rust::elevator_controller::orders;
-use driver_rust::cost_function::cost_function::{assign_orders};
 use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 use driver_rust::network;
 use driver_rust::network::udp;
-use std::sync::Arc;
+
 use std::thread::*;
 use std::env;
 
@@ -65,29 +64,13 @@ pub fn fetch_command_line_args() -> (u16, u8) {
 
     let command_line_args: Vec<String> = env::args().collect();
 
-    let port = if command_line_args.len() > 1 {
-        match command_line_args[1].parse::<u16>() {
-            Ok(p) => p,
-            Err(_) => {
-                //println!("Warning: Invalid port provided. Using default: {}", default_port);
-                default_port
-            }
-        }
-    } else {
-        default_port
-    };
+    let port = command_line_args.get(1)
+        .and_then(|s| s.parse::<u16>().ok())
+        .unwrap_or(default_port);
 
-    let elevator_id = if command_line_args.len() > 2 {
-        match command_line_args[2].parse::<u8>() {
-            Ok(id) => id,
-            Err(_) => {
-                //println!("Warning: Invalid elevator ID provided. Using default: {}", default_elevator_id);
-                default_elevator_id
-            }
-        }
-    } else {
-        default_elevator_id
-    };
+    let elevator_id = command_line_args.get(2)
+        .and_then(|s| s.parse::<u8>().ok())
+        .unwrap_or(default_elevator_id);
 
     (port, elevator_id)
 }

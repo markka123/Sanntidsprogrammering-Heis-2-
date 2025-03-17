@@ -1,19 +1,17 @@
 #![allow(dead_code)]
 // PACKAGES
-use crate::elevator_controller::orders::{CabOrders, HallOrders};
-use crate::elevator_controller::elevator_fsm;
+use crate::elevator_controller::orders;
 use crate::elevator_controller::direction;
 use crate::elevator_controller::state;
 
 use std::process::{Command, Stdio};
 use serde_json::{json};
-use num2words::Num2Words;
 
 //ASSIGN_REQUESTS
 pub fn assign_orders(
     states: &state::States,
-    cab_requests: &CabOrders,
-    hall_requests: &HallOrders,
+    cab_requests: &orders::CabOrders,
+    hall_requests: &orders::HallOrders,
 ) -> String{
 
     let mut states_map = serde_json::Map::new();
