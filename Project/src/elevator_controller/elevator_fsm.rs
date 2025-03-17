@@ -6,10 +6,8 @@ use crate::elevator_controller::orders;
 use crate::elevator_controller::state::{State, Behaviour};
 use crate::elevio::elev::{CAB, DIRN_STOP, HALL_DOWN};
 use crate::elevio::{self, elev as e};
+
 use std::thread::*;
-use serde::{Serialize, Deserialize};
-
-
 use crossbeam_channel as cbc;
 
 pub fn elevator_fsm(

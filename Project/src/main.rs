@@ -3,28 +3,24 @@ use driver_rust::config::config;
 use driver_rust::distributor;
 use driver_rust::elevator_controller;
 use driver_rust::elevator_controller::lights;
-use driver_rust::elevator_controller::orders::{AllOrders, Orders};
-use driver_rust::cost_function::cost_function::{assign_orders};
+use driver_rust::elevator_controller::orders;
 use driver_rust::elevio;
 use driver_rust::elevio::elev as e;
 use driver_rust::network;
 use driver_rust::network::udp;
-use std::sync::Arc;
+
 use std::thread::*;
 use std::env;
 
-fn main() -> std::io::Result<()> {
+fn main() -> () {
     
     let (port, elevator_id) = fetch_command_line_args();
-
-    //println!("{}, {}", port, elevator_id);
 
     let addr = format!("localhost:{}", port);
 
     let elevator = e::Elevator::init(&addr, config::ELEV_NUM_FLOORS)?;
-    //println!("Elevator started:\n{:#?}", elevator);
 
-    let (new_order_tx, new_order_rx) = cbc::unbounded::<Orders>();
+    let (new_order_tx, new_order_rx) = cbc::unbounded::<orders::Orders>();
     let (emergency_reset_tx, emergency_reset_rx) = cbc::unbounded::<bool>();
     let (new_state_tx, new_state_rx) = cbc::unbounded::<elevator_controller::state::State>();
     let (order_completed_tx, order_completed_rx) = cbc::unbounded::<elevio::poll::CallButton>();
@@ -54,26 +50,6 @@ fn main() -> std::io::Result<()> {
             )
         });
     }
-
-    // let mut all_orders = AllOrders::init();
-
-    loop {
-        // cbc::select! {
-        // recv(call_button_rx) -> a => {
-        //     let call_button = a.unwrap();
-        //     all_orders.add_order(call_button, config::elevator_id as usize, &new_order_tx);
-        // },
-        // recv(order_completed_rx) -> a => {
-        //     let call_button = a.unwrap();
-        //     all_orders.remove_order(call_button, config::elevator_id as usize, &new_order_tx);
-        // },
-        //     recv(emergency_reset_rx) -> _ => {
-        //         all_orders = AllOrders::init();
-        //         new_order_tx.send(all_orders.orders).unwrap();
-        //     }
-        // }
-    }
-    Ok(())
 }
 
 

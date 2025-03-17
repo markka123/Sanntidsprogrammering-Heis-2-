@@ -1,23 +1,18 @@
 #![allow(dead_code)]
-use crate::distributor::distributor::{COMPLETED_ORDER, NEW_ORDER};
-use crate::elevator_controller::orders;
-use crate::elevator_controller::orders::{AllOrders, Orders};
-use crate::elevio::poll::CallButton;
+use crate::distributor::distributor;
 use crate::config::config;
-use crate::distributor::distributor::{Message};
 use crate::network::udp;
+
 use crossbeam_channel as cbc;
-use serde::{Deserialize, Serialize};
-use crate::elevator_controller::state::{State, Behaviour};
-use std::net::UdpSocket;
-use std::sync::Arc;
+use std::net;
+use std::sync;
 use serde_json;
 
 pub fn receiver(
-    message_tx: cbc::Sender<Message>,
+    message_tx: cbc::Sender<distributor::Message>,
     master_activate_tx: cbc::Sender<bool>,
     is_online_tx: cbc::Sender<bool>,
-    socket: Arc<UdpSocket>,
+    socket: sync::Arc<net::UdpSocket>,
     elevator_id: u8
 ) {
 
@@ -40,26 +35,24 @@ pub fn receiver(
             },
             default(config::UDP_POLL_PERIOD) => {
                 if let Some((received_message, sender_addr)) = udp::receive_udp_message::<String>(&socket) {
-                    match serde_json::from_str::<Message>(&received_message) {
-                        Ok(Message::StateMsg((elevator_id, state))) => {
+                    match serde_json::from_str::<distributor::Message>(&received_message) {
+                        Ok(distributor::Message::StateMsg((elevator_id, state))) => {
                             network_timer = cbc::after(config::NETWORK_TIMER_DURATION);
                             is_online_tx.send(true).unwrap();
-                            message_tx.send(Message::StateMsg((elevator_id, state))).unwrap();
+                            message_tx.send(distributor::Message::StateMsg((elevator_id, state))).unwrap();
 
                         }
-                        Ok(Message::CallMsg(call)) => {
-                            message_tx.send(Message::CallMsg(call)).unwrap();
+                        Ok(distributor::Message::CallMsg(call)) => {
+                            message_tx.send(distributor::Message::CallMsg(call)).unwrap();
                         }
-                        Ok(Message::AllAssignedOrdersMsg((incoming_master_id, all_assigned_orders))) => {
+                        Ok(distributor::Message::AllAssignedOrdersMsg((incoming_master_id, all_assigned_orders))) => {
                             master_id = incoming_master_id;
                             master_timer = cbc::after(config::MASTER_TIMER_DURATION);
-                            message_tx.send(Message::AllAssignedOrdersMsg((master_id, all_assigned_orders))).unwrap();
+                            message_tx.send(distributor::Message::AllAssignedOrdersMsg((master_id, all_assigned_orders))).unwrap();
    
                         }
                         Err(e) => {
-                            //println!("ERROR: Received message with unexpected format.");
-                            //println!("Received: {:#?}", received_message);
-                            //println!("Deserialization Error: {:#?}", e);
+                            // TODO: HANDLE ERROR
                         }
                     }
                 }
