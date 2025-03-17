@@ -34,7 +34,6 @@ pub fn elevator_fsm(
     let mut all_hall_orders: orders::HallOrders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
 
     let mut motor_timer = cbc::never();
-    let lights_ticker = cbc::tick(config::SET_LIGHTS_PERIOD);
 
     let (door_open_tx, door_open_rx) = cbc::unbounded::<bool>();
     let (door_close_tx, door_close_rx) = cbc::unbounded::<bool>();
@@ -78,11 +77,10 @@ pub fn elevator_fsm(
 
     loop {
         cbc::select! {
-            recv(lights_ticker) -> _ => {
-                lights::new_set_lights(&orders, &all_hall_orders, elevator.clone());
-            },
             recv(new_order_rx) -> new_order_tuple => {
                 (orders, all_hall_orders) = new_order_tuple.unwrap();
+            
+                lights::set_lights(&orders, &all_hall_orders, elevator.clone());
 
                 if state.emergency_stop {
                     continue;
