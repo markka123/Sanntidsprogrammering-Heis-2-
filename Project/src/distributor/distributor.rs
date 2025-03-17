@@ -75,7 +75,7 @@ pub fn distributor(
     let (master_activate_tx, master_activate_rx) = cbc::unbounded::<bool>();
     let (call_button_tx, call_button_rx) = cbc::unbounded::<poll::CallButton>();
     let (call_msg_tx, call_msg_rx) = cbc::unbounded::<(u8, poll::CallButton)>();
-    let (is_online_tx, is_online_rx) = cbc::unbounded::<bool>();
+
 
 
 
@@ -200,6 +200,9 @@ pub fn distributor(
             },
             recv(check_slaves_heartbeat_ticker) -> _ => {
                 let now = Instant::now();
+                if states[elevator_id].online {
+
+                }
                 for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
                     if now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION {
                         if !states[id].offline {

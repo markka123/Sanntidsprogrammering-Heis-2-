@@ -92,6 +92,7 @@ pub fn elevator_fsm(
                                 state.behaviour = Behaviour::DoorOpen;
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
                                 door_open_tx.send(true).unwrap();
+                                println!("Case 1");
                                 new_state_tx.send(state.clone()).unwrap();
                             },
                             // Open doors if there's an order on the current floor in the oppisite direction.
@@ -100,6 +101,7 @@ pub fn elevator_fsm(
                                 state.direction = direction::direction_opposite(state.direction);
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
                                 door_open_tx.send(true).unwrap();
+                                println!("Case 2");
                                 new_state_tx.send(state.clone()).unwrap();
                             },
                             
@@ -134,6 +136,7 @@ pub fn elevator_fsm(
                         //Keep door open 
                         if orders::order_at_floor_in_direction(&orders, state.floor, state.direction)  {
                             door_open_tx.send(true).unwrap();
+                            println!("Case 3");
                             orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
                         }
                     },
@@ -161,6 +164,7 @@ pub fn elevator_fsm(
                                 state.behaviour = Behaviour::DoorOpen;
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
+                                println!("Case4");
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -174,6 +178,7 @@ pub fn elevator_fsm(
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap(); 
+                                println!("Case 5");
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -213,6 +218,7 @@ pub fn elevator_fsm(
                             _ if orders::order_at_floor_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
                                 state.direction = direction::direction_opposite(state.direction);
                                 door_open_tx.send(true).unwrap();
+                                println!("Case 6");
                                 new_state_tx.send(state.clone()).unwrap();
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
                             },
@@ -232,9 +238,10 @@ pub fn elevator_fsm(
 
                     },
                     Behaviour::Idle => {
-                        if state.emergency_stop {
+                        /* if state.emergency_stop {
                             door_open_tx.send(true).unwrap(); // Sikker på dette?
-                        }
+                            println!("Case 7");
+                        } */
                     }
                     _ => {
                         //println!("Closing doors in unexpected state");
