@@ -4,10 +4,10 @@ use crossbeam_channel as cbc;
 
 pub fn door(
     elevator: e::Elevator,
-    door_open_rx: &cbc::Receiver<bool>,
-    door_close_tx: &cbc::Sender<bool>,
-    obstruction_rx: &cbc::Receiver<bool>,
-    obstructed_tx: &cbc::Sender<bool>
+    door_open_rx: cbc::Receiver<bool>,
+    door_close_tx: cbc::Sender<bool>,
+    obstruction_rx: cbc::Receiver<bool>,
+    obstructed_tx: cbc::Sender<bool>
 ) {
 
     elevator.door_light(false);

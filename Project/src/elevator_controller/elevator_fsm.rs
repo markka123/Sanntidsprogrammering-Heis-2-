@@ -60,10 +60,10 @@ pub fn elevator_fsm(
         spawn(move || {
             doors::door(
                 elevator,
-                &door_open_rx,
-                &door_close_tx,
-                &obstruction_rx,
-                &obstructed_tx,
+                door_open_rx,
+                door_close_tx,
+                obstruction_rx,
+                obstructed_tx,
             )
         });
     }
@@ -85,34 +85,35 @@ pub fn elevator_fsm(
                 match state.behaviour {
                     Behaviour::Idle => {
                         match () {
-                            _ if orders[state.floor as usize][(state.direction) as usize] ||
-                                orders[state.floor as usize][CAB as usize] => {
-                                door_open_tx.send(true).unwrap();
-                                orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 1");
+                            // order at current floor in direction
+                            // Open doors if there's an order on the current floor in the same direction or a "CAB" order.
+                            _ if orders::order_at_floor_in_direction(&orders, state.floor, state.direction) => {
                                 state.behaviour = Behaviour::DoorOpen;
+                                orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
+                                door_open_tx.send(true).unwrap();
                                 new_state_tx.send(state.clone()).unwrap();
                             },
-                            _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
-                                door_open_tx.send(true).unwrap();
+                            // Open doors if there's an order on the current floor in the oppisite direction.
+                            _ if orders::order_at_floor_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
+                                state.behaviour = Behaviour::DoorOpen;
                                 state.direction = direction::direction_opposite(state.direction);
-                                new_state_tx.send(state.clone()).unwrap();
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 2");
-                                state.behaviour = Behaviour::DoorOpen;
+                                door_open_tx.send(true).unwrap();
                                 new_state_tx.send(state.clone()).unwrap();
                             },
-
+                            
+                            // Move if there's an order in the current direction.
                             _ if orders::order_in_direction(&orders, state.floor, state.direction) => {
-                                elevator.motor_direction(direction::call_to_md(state.direction));
                                 state.behaviour = Behaviour::Moving;
+                                elevator.motor_direction(direction::call_to_md(state.direction));
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             },
+                            // Switch direction and move if there's an order in the opposite direction.
                             _ if orders::order_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
+                                state.behaviour = Behaviour::Moving;
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(direction::call_to_md(state.direction));
-                                state.behaviour = Behaviour::Moving;
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             }
@@ -121,7 +122,7 @@ pub fn elevator_fsm(
                                 
                             }
                             () => {
-                                //println!("Handling new order in unexpected state.")
+                                println!("Handling new order in unexpected state.")
                             }
                                 
             
@@ -129,10 +130,10 @@ pub fn elevator_fsm(
                         }
                     },
                     Behaviour::DoorOpen => {
-                        if orders[state.floor as usize][CAB as usize] || orders[state.floor as usize][state.direction as usize] {
-                            // door_open_tx.send(true).unwrap();
+                        //Keep door open 
+                        if orders::order_at_floor_in_direction(&orders, state.floor, state.direction)  {
+                            door_open_tx.send(true).unwrap();
                             orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                            println!("order done 3");
                         }
                     },
                     Behaviour::Moving => {
@@ -155,43 +156,24 @@ pub fn elevator_fsm(
                 match state.behaviour {
                     Behaviour::Moving => {
                         match () {
-                            _ if (orders[state.floor as usize][state.direction as usize]) => {
+                            _ if orders::order_at_floor_in_direction(&orders, state.floor, state.direction)=> {
+                                state.behaviour = Behaviour::DoorOpen;
                                 elevator.motor_direction(DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 4");
-                                state.behaviour = Behaviour::DoorOpen;
                                 new_state_tx.send(state.clone()).unwrap();
                             },
 
-                            _ if (orders[state.floor as usize][CAB as usize] && orders::order_in_direction(&orders, state.floor, state.direction)) => {
-                                elevator.motor_direction(DIRN_STOP);
-                                door_open_tx.send(true).unwrap();
-                                orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 5");
-                                state.behaviour = Behaviour::DoorOpen;
-                                new_state_tx.send(state.clone()).unwrap();
-                            },
-
-                            _ if (orders[state.floor as usize][CAB as usize] && !orders[state.floor as usize][direction::direction_opposite(state.direction) as usize]) => {
-                                elevator.motor_direction(DIRN_STOP);
-                                door_open_tx.send(true).unwrap();
-                                orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 6");
-                                state.behaviour = Behaviour::DoorOpen;
-                                new_state_tx.send(state.clone()).unwrap();
-                            },
                             _ if orders::order_in_direction(&orders, floor, state.direction) => {
                                 motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             },
 
-                            _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
-                                elevator.motor_direction(DIRN_STOP);
-                                door_open_tx.send(true).unwrap();
-                                state.direction = direction::direction_opposite(state.direction);
-                                orders::order_done(floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 7");
+                            _ if orders::order_at_floor_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
                                 state.behaviour = Behaviour::DoorOpen;
+                                state.direction = direction::direction_opposite(state.direction);
+                                elevator.motor_direction(DIRN_STOP);
+                                door_open_tx.send(true).unwrap(); 
+                                orders::order_done(floor, state.direction, orders, &order_completed_tx);
                                 new_state_tx.send(state.clone()).unwrap();
                             },
 
@@ -203,8 +185,8 @@ pub fn elevator_fsm(
                             },
 
                             _ => {
-                                elevator.motor_direction(DIRN_STOP);
                                 state.behaviour = Behaviour::Idle;
+                                elevator.motor_direction(DIRN_STOP);
                                 new_state_tx.send(state.clone()).unwrap();
                             }
                         }
@@ -222,22 +204,21 @@ pub fn elevator_fsm(
                     Behaviour::DoorOpen => {
                         match () {
                             _ if orders::order_in_direction(&orders, state.floor, state.direction) => {
-                                elevator.motor_direction(direction::call_to_md(state.direction));
                                 state.behaviour = Behaviour::Moving;
+                                elevator.motor_direction(direction::call_to_md(state.direction));
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::never();
                             },
-                            _ if orders[state.floor as usize][direction::direction_opposite(state.direction) as usize] => {
-                                door_open_tx.send(true).unwrap();
+                            _ if orders::order_at_floor_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
                                 state.direction = direction::direction_opposite(state.direction);
+                                door_open_tx.send(true).unwrap();
                                 new_state_tx.send(state.clone()).unwrap();
                                 orders::order_done(state.floor, state.direction, orders, &order_completed_tx);
-                                println!("Order done 7");
                             },
                             _ if orders::order_in_direction(&orders, state.floor, direction::direction_opposite(state.direction)) => {
+                                state.behaviour = Behaviour::Moving;
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(direction::call_to_md(state.direction));
-                                state.behaviour = Behaviour::Moving;
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::never();
                             },
@@ -289,10 +270,10 @@ pub fn elevator_fsm(
                 let is_emergency_stop = a.unwrap();
 
                 if is_emergency_stop && !state.emergency_stop {
+                    state.behaviour = Behaviour::Idle;
                     state.emergency_stop = true;
                     elevator.motor_direction(DIRN_STOP);
                     motor_timer = cbc::never();
-                    state.behaviour = Behaviour::Idle;
                     new_state_tx.send(state.clone()).unwrap();
                 }
                 else if is_emergency_stop && state.emergency_stop {

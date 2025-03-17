@@ -78,6 +78,10 @@ pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
     }
 }
 
+pub fn order_at_floor_in_direction(orders: &Orders, floor: u8, direction: u8) ->  bool {
+    orders[floor as usize][(direction) as usize] || orders[floor as usize][CAB as usize]
+}
+
 pub fn order_done(
     floor: u8,
     direction: u8,
