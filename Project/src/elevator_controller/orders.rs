@@ -27,9 +27,9 @@ impl AllOrders {
             offline_orders,
         }
     }
-    pub fn add_order(&mut self, call_button: CallButton, elevator_id: usize) {
+    pub fn add_order(&mut self, call_button: CallButton, elevator_id: u8) {
         if call_button.call == CAB {
-            self.cab_orders[elevator_id][call_button.floor as usize] = true;
+            self.cab_orders[elevator_id as usize][call_button.floor as usize] = true;
         } else if call_button.call == HALL_DOWN || call_button.call == HALL_UP {
             self.hall_orders[call_button.floor as usize][call_button.call as usize] = true;
         } else {
@@ -37,9 +37,9 @@ impl AllOrders {
         }
     }
 
-    pub fn remove_order(&mut self, call_button: CallButton, elevator_id: usize) {
+    pub fn remove_order(&mut self, call_button: CallButton, elevator_id: u8) {
         if call_button.call == CAB {
-            self.cab_orders[elevator_id][call_button.floor as usize] = false;
+            self.cab_orders[elevator_id as usize][call_button.floor as usize] = false;
         } else if call_button.call == HALL_DOWN || call_button.call == HALL_UP {
             self.hall_orders[call_button.floor as usize][call_button.call as usize] = false;
         } else {

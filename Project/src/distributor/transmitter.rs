@@ -16,7 +16,6 @@ pub fn transmitter(
     new_state_rx: cbc::Receiver<state::State>,
     master_transmit_rx: cbc::Receiver<String>,
     call_msg_rx: cbc::Receiver<(u8, poll::CallButton)>,
-    unconfirmed_orders: sync::Arc<sync::Mutex<Vec<(u8, poll::CallButton)>>>,
     socket: sync::Arc<net::UdpSocket>,
 ) {
     let mut state = state::State {
@@ -30,7 +29,6 @@ pub fn transmitter(
     };
 
     let state_ticker = cbc::tick(config::STATE_TRANSMIT_PERIOD);
-    let unconfirmed_orders_ticker = cbc::tick(config::UNCONFIRMED_ORDERS_TRANSMIT_PERIOD);
 
     loop {
         cbc::select! {
@@ -42,13 +40,6 @@ pub fn transmitter(
                 let (msg_type, call) = a.unwrap();
                 let msg = distributor::Message::CallMsg((elevator_id, [msg_type, call.floor, call.call]));
                 broadcast_message(&socket, &msg);
-                unconfirmed_orders.lock().unwrap().push((msg_type, call));
-            },
-            recv(unconfirmed_orders_ticker) -> _ => {
-                unconfirmed_orders.lock().unwrap().iter().for_each(|(msg_type, call)| {
-                    let msg = distributor::Message::CallMsg((elevator_id, [*msg_type, call.floor, call.call]));
-                    broadcast_message(&socket, &msg);
-                });
             },
             recv(state_ticker) -> _ => {
                 let msg = distributor::Message::StateMsg((elevator_id, state.clone()));
