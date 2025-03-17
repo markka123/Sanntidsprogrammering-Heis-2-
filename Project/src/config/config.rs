@@ -1,7 +1,7 @@
 use std::time::*;
 
 pub const ELEV_NUM_FLOORS: u8 = 4;
-pub const ELEV_NUM_ELEVATORS: u8 = 2;
+pub const ELEV_NUM_ELEVATORS: u8 = 1;
 pub const ELEV_NUM_BUTTONS: u8 = 3;
 
 pub const ELEV_IP: &str = "10.100.23.33";
