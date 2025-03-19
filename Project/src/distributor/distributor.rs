@@ -59,15 +59,7 @@ pub fn distributor(
     let socket_receiver = Arc::clone(&socket);
     let socket_transmitter = Arc::clone(&socket);
     
-    let mut states: state::States = std::array::from_fn(|_| state::State {
-        obstructed: false,
-        motorstop: false,
-        offline: false,
-        emergency_stop: false,
-        behaviour: state::Behaviour::Idle,
-        floor: 0,
-        direction: e::HALL_DOWN,
-    });
+    let mut states: state::States = std::array::from_fn(|_| state::State::init());
 
     let (message_tx, message_rx) = cbc::unbounded::<Message>();
     let (is_online_tx, is_online_rx) = cbc::unbounded::<bool>();
@@ -172,9 +164,7 @@ pub fn distributor(
 
                         let hall_orders = get_all_hall_orders(&all_assigned_orders_map);
 
-                        let elevator_is_availible = states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed || states[elevator_id as usize].offline;
-
-                        if !elevator_is_availible {
+                        if states[elevator_id as usize].is_availible() {
                             if let Some(new_assigned_orders) = all_assigned_orders_map.get(&elevator_id) {
                                 if (*new_assigned_orders != assigned_orders)  || (hall_orders != all_orders.hall_orders) {
                                     assigned_orders = *new_assigned_orders;

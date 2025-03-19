@@ -18,15 +18,7 @@ pub fn transmitter(
     call_msg_rx: cbc::Receiver<(u8, poll::CallButton)>,
     socket: sync::Arc<net::UdpSocket>,
 ) {
-    let mut state = state::State {
-        obstructed: false,
-        motorstop: false,
-        offline: false,
-        emergency_stop: false,
-        behaviour: state::Behaviour::Idle,
-        floor: 0,
-        direction: elev::HALL_DOWN,
-    };
+    let mut state: state::State = state::State::init();
 
     let state_ticker = cbc::tick(config::STATE_TRANSMIT_PERIOD);
 
