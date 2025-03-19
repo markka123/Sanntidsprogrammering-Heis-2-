@@ -3,7 +3,6 @@ use crate::elevio::elev;
 
 use serde;
 
-
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy)]
 pub enum Behaviour {
     Idle,
@@ -49,12 +48,8 @@ impl State {
         }
     }
     pub fn is_availible(self) -> bool {
-        if self.motorstop || self.emergency_stop || self.obstructed || self.offline {
-            return false;
-        }
-        true
+        !(self.motorstop || self.emergency_stop || self.obstructed || self.offline)
     }
 }
-
 
 pub type States = [State; config::ELEV_NUM_ELEVATORS as usize];
