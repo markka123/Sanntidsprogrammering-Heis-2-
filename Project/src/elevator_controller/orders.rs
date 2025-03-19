@@ -18,14 +18,6 @@ pub struct AllOrders {
     pub offline_orders: Orders,
 }
 
-#[derive(Clone, Debug, Copy)]
-pub struct ElevatorOrders {
-    pub hall_orders: HallOrders,
-    pub orders: Orders,
-}
-//functions
-// init, order_at_floor_in_direction, order_in_direction, order_done
-
 pub struct DistributorOrders {
     pub hall_orders: HallOrders,
     pub cab_orders: CabOrders,
@@ -72,49 +64,67 @@ impl AllOrders {
     }
 }
 
-pub fn order_in_direction(orders: &Orders, floor: u8, dir: u8) -> bool {
-    match dir {
-        HALL_UP => {
-            for f in (floor + 1)..config::ELEV_NUM_FLOORS {
-                for b in 0..config::ELEV_NUM_BUTTONS {
-                    if orders[f as usize][b as usize] {
-                        return true;
-                    }
-                }
-            }
-            false
-        }
-        HALL_DOWN => {
-            for f in (0..floor).rev() {
-                for b in 0..config::ELEV_NUM_BUTTONS {
-                    if orders[f as usize][b as usize] {
-                        return true;
-                    }
-                }
-            }
-            false
-        }
-        _ => false,
-    }
+#[derive(Clone, Debug, Copy)]
+pub struct ElevatorOrders {
+    pub hall_orders: HallOrders,
+    pub orders: Orders,
 }
 
-pub fn order_at_floor_in_direction(orders: &Orders, floor: u8, direction: u8) ->  bool {
-    orders[floor as usize][(direction) as usize] || orders[floor as usize][CAB as usize]
-}
+impl ElevatorOrders {
+    pub fn init() -> Self {
+        let hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
+        let orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
+        Self {
+            hall_orders,
+            orders,
+        }
+    }
 
-pub fn order_done(
-    floor: u8,
-    direction: u8,
-    orders: Orders,
-    order_completed_tx: &cbc::Sender<poll::CallButton>,
-) {
-    if orders[floor as usize][direction as usize] {
-        let _ = order_completed_tx.send(poll::CallButton {
-            floor,
-            call: direction,
-        });
+    pub fn order_at_floor_in_direction(&mut self, floor: u8, direction: u8) ->  bool {
+        self.orders[floor as usize][(direction) as usize] || self.orders[floor as usize][CAB as usize]
     }
-    if orders[floor as usize][CAB as usize] {
-        let _ = order_completed_tx.send(poll::CallButton { floor, call: CAB });
+
+    pub fn order_in_direction(&mut self, floor: u8, dir: u8) -> bool {
+        match dir {
+            HALL_UP => {
+                for f in (floor + 1)..config::ELEV_NUM_FLOORS {
+                    for b in 0..config::ELEV_NUM_BUTTONS {
+                        if self.orders[f as usize][b as usize] {
+                            return true;
+                        }
+                    }
+                }
+                false
+            }
+            HALL_DOWN => {
+                for f in (0..floor).rev() {
+                    for b in 0..config::ELEV_NUM_BUTTONS {
+                        if self.orders[f as usize][b as usize] {
+                            return true;
+                        }
+                    }
+                }
+                false
+            }
+            _ => false,
+        }
     }
+
+    pub fn order_done(
+        &mut self, 
+        floor: u8,
+        direction: u8,
+        order_completed_tx: &cbc::Sender<poll::CallButton>,
+    ) {
+        if self.orders[floor as usize][direction as usize] {
+            let _ = order_completed_tx.send(poll::CallButton {
+                floor,
+                call: direction,
+            });
+        }
+        if self.orders[floor as usize][CAB as usize] {
+            let _ = order_completed_tx.send(poll::CallButton { floor, call: CAB });
+        }
+    }
+    
 }
