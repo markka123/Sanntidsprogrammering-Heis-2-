@@ -52,7 +52,7 @@ pub fn distributor(
     
     let unconfirmed_orders_ticker = cbc::tick(config::UNCONFIRMED_ORDERS_TRANSMIT_PERIOD);
     let mut master_ticker = cbc::never();
-    let check_slaves_heartbeat_ticker = cbc::tick(config::NETWORK_TIMER_DURATION);
+    let check_heartbeat_ticker = cbc::tick(config::NETWORK_TIMER_DURATION);
 
 
     let socket = udp::create_udp_socket().expect("Failed to create UDP socket");
@@ -201,7 +201,7 @@ pub fn distributor(
                 let assigned_orders_str = cost_function::assign_orders(&states, &all_orders.cab_orders, &all_orders.hall_orders);
                 master_transmit_tx.send(assigned_orders_str).unwrap();
             },
-            recv(check_slaves_heartbeat_ticker) -> _ => {
+            recv(check_heartbeat_ticker) -> _ => {
                 let now = Instant::now();
                 for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
                     if now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION {
@@ -216,6 +216,7 @@ pub fn distributor(
                     }
                 }
             },
+            // fix, put the below recv case in a functions
             recv(is_online_rx) -> is_online_msg => {
                 let network_status = is_online_msg.unwrap();
                 if network_status && !is_online {
@@ -250,7 +251,6 @@ fn get_all_hall_orders(map: &HashMap<u8, orders::Orders>) -> orders::HallOrders 
             all_hall_orders[floor][1] |= call[1];
         }
     }
-    
     all_hall_orders
 }
 

@@ -33,6 +33,7 @@ pub fn broadcast_udp_message<T: Serialize>(socket: &Arc<UdpSocket>, message: &T)
     Ok(())
 }
 
+// Remove?
 pub fn send_udp_message<T: Serialize>(
     socket: &Arc<UdpSocket>,
     message: &T,

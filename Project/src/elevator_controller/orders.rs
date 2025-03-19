@@ -16,6 +16,24 @@ pub struct AllOrders {
     pub offline_orders: Orders,
 }
 
+#[derive(Clone, Debug, Copy)]
+pub struct ElevatorOrders {
+    pub hall_orders: HallOrders,
+    pub orders: Orders,
+}
+//functions
+// init, order_at_floor_in_direction, order_in_direction, order_done
+
+pub struct DistributorOrders {
+    pub hall_orders: HallOrders,
+    pub cab_orders: CabOrders,
+    pub unconfirmed_orders: Vec<(u8, poll::CallButton)>,
+    pub all_assigned_orders: HashMap<u8, Orders>,
+    pub elevator_orders: Orders,
+}
+// functions
+// init, add, remove, confirm_orders, get_assigned_hall_orders, init_offline_operation (recv is_online)
+
 impl AllOrders {
     pub fn init() -> Self {
         let hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];

@@ -20,6 +20,8 @@ pub struct State {
     pub floor: u8,
     pub direction: u8,
 }
+// functions
+// init, is_availible
 
 pub type States = [State; config::ELEV_NUM_ELEVATORS as usize];
 
