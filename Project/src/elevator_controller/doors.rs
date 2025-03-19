@@ -24,8 +24,7 @@ pub fn door(
                 if is_obstructed {
                     door_timer = cbc::never();
                 }
-                else if !is_door_open {
-                    
+                else {
                     door_timer = cbc::after(config::DOOR_TIMER_DURATION);
                 }
                 is_door_open = true;

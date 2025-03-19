@@ -190,7 +190,7 @@ pub fn elevator_fsm(
                                 state.behaviour = state::Behaviour::Moving;
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 new_state_tx.send(state.clone()).unwrap();
-                                motor_timer = cbc::never();
+                                motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             },
                             _ if elevator_orders.order_at_floor_in_direction(state.floor, direction::direction_opposite(state.direction)) => {
                                 state.direction = direction::direction_opposite(state.direction);
@@ -203,7 +203,7 @@ pub fn elevator_fsm(
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 new_state_tx.send(state.clone()).unwrap();
-                                motor_timer = cbc::never();
+                                motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             },
                             _ => {
                                 state.behaviour = state::Behaviour::Idle;
@@ -256,6 +256,7 @@ pub fn elevator_fsm(
                     state.emergency_stop = false;
                     if state.behaviour == state::Behaviour::Moving {
                         elevator.motor_direction(direction::call_to_md(state.direction));
+                        motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                     }
                     new_state_tx.send(state.clone()).unwrap();
                     println!("Emergency stop deactivated");

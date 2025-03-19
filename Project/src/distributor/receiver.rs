@@ -24,7 +24,6 @@ pub fn receiver(
                     master_activate_tx.send(true).unwrap();
                     println!("Taking over as master.");
                 }
-                master_timer = cbc::after(config::MASTER_TIMER_DURATION);
             },
             default(config::UDP_POLL_PERIOD) => {
                 if let Some((received_message, _)) = udp::receive_udp_message::<String>(&socket) {
