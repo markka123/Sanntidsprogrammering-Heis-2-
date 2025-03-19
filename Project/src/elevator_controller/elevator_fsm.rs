@@ -63,6 +63,7 @@ pub fn elevator_fsm(
     elevator.motor_direction(direction::call_to_md(state.direction));
 
     lights::set_lights(&elevator_orders, elevator.clone());
+    elevator.stop_button_light(state.emergency_stop);
 
     loop {
         cbc::select! {
@@ -255,7 +256,6 @@ pub fn elevator_fsm(
                 else if is_emergency_stop && state.emergency_stop {
                     state.emergency_stop = false;
                     state.behaviour = state::Behaviour::Idle;
-                    state.emergency_stop = true;
                     elevator.motor_direction(elev::DIRN_STOP);
                     new_state_tx.send(state.clone()).unwrap();
                     println!("Emergency stop deactivated");

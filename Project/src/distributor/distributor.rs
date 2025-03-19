@@ -153,8 +153,10 @@ pub fn distributor(
                 master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
             },
             recv(master_ticker) -> _ => {
-                let assigned_orders_string = cost_function::assign_orders(&states, &distributor_orders.cab_orders, &distributor_orders.hall_orders);
-                master_transmit_tx.send(assigned_orders_string).unwrap();
+                if states.iter().any(|state| state.is_availible()) {
+                    let assigned_orders_string = cost_function::assign_orders(&states, &distributor_orders.cab_orders, &distributor_orders.hall_orders);
+                    master_transmit_tx.send(assigned_orders_string).unwrap();
+                }
             },
             recv(check_heartbeat_ticker) -> _ => {
                 let now = Instant::now();
