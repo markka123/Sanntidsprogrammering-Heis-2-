@@ -150,6 +150,7 @@ pub fn distributor(
                 }
             },
             recv(master_activate_rx) -> _ => {
+                println!("Taking over as master.");
                 master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
             },
             recv(master_ticker) -> _ => {
