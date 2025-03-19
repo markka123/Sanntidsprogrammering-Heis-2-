@@ -150,8 +150,10 @@ pub fn distributor(
                 }
             },
             recv(master_activate_rx) -> _ => {
-                println!("Taking over as master.");
-                master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
+                if !states[elevator_id as usize].offline {
+                    println!("Taking over as master.");
+                    master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
+                }
             },
             recv(master_ticker) -> _ => {
                 if states.iter().any(|state| state.is_availible()) {
