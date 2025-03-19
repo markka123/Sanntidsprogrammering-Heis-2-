@@ -1,16 +1,25 @@
 use crate::config::config;
+use crate::elevio::elev;
 
-use serde::{Serialize, Deserialize};
+use serde;
 
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy)]
 pub enum Behaviour {
     Idle,
     Moving,
     DoorOpen,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+pub fn behaviour_to_string(behaviour: Behaviour) -> String {
+    match behaviour {
+        Behaviour::Idle => "idle".to_string(),
+        Behaviour::Moving => "moving".to_string(),
+        Behaviour::DoorOpen => "doorOpen".to_string(),
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy)]
 pub struct State {
     pub obstructed: bool,
     pub motorstop: bool,
@@ -20,15 +29,32 @@ pub struct State {
     pub floor: u8,
     pub direction: u8,
 }
-// functions
-// init, is_availible
-
-pub type States = [State; config::ELEV_NUM_ELEVATORS as usize];
-
-pub fn behaviour_to_string(behaviour: Behaviour) -> String {
-    match behaviour {
-        Behaviour::Idle => "idle".to_string(),
-        Behaviour::Moving => "moving".to_string(),
-        Behaviour::DoorOpen => "doorOpen".to_string(),
+impl State {
+    pub fn init() -> Self {
+        let obstructed = false;
+        let motorstop = false;
+        let offline = false;
+        let emergency_stop = false;
+        let behaviour = Behaviour::Idle;
+        let floor = 0;
+        let direction = elev::HALL_DOWN;
+        Self {
+            obstructed,
+            motorstop,
+            offline,
+            emergency_stop,
+            behaviour,
+            floor,
+            direction,
+        }
+    }
+    pub fn is_availible(self) -> bool {
+        if self.motorstop || self.emergency_stop || self.obstructed || self.offline {
+            return false;
+        }
+        true
     }
 }
+
+
+pub type States = [State; config::ELEV_NUM_ELEVATORS as usize];
