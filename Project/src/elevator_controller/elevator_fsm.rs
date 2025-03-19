@@ -68,7 +68,6 @@ pub fn elevator_fsm(
     loop {
         cbc::select! {
             recv(new_order_rx) -> new_order_tuple => {
-                println!("Received new order");
                 (elevator_orders.orders, elevator_orders.hall_orders) = new_order_tuple.unwrap();
             
                 lights::set_lights(&elevator_orders, elevator.clone());

@@ -14,6 +14,9 @@ pub fn assign_orders(
     let mut states_map = serde_json::Map::new();
 
     for (id, state) in states.iter().enumerate() {
+        if !state.is_availible() {
+            continue;
+        }
         let state_variables = json!({
             "behaviour": state::behaviour_to_string(state.behaviour),
             "floor": state.floor.to_string(),
