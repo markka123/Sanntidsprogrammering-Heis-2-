@@ -1,13 +1,11 @@
 use crossbeam_channel as cbc;
 use driver_rust::config::config;
-use driver_rust::distributor;
-use driver_rust::elevator_controller;
-use driver_rust::elevator_controller::lights;
 use driver_rust::elevator_controller::orders;
-use driver_rust::elevio;
-use driver_rust::elevio::elev as e;
-use driver_rust::network;
-use driver_rust::network::udp;
+use driver_rust::elevio::elev;
+use driver_rust::elevio::poll;
+use driver_rust::elevator_controller::elevator_fsm;
+use driver_rust::elevator_controller::state;
+use driver_rust::distributor::distributor;
 
 use std::thread::*;
 use std::env;
@@ -18,16 +16,16 @@ fn main() -> std::io::Result<()> {
 
     let addr = format!("localhost:{}", port);
 
-    let elevator = e::Elevator::init(&addr, config::ELEV_NUM_FLOORS)?;
+    let elevator = elev::Elevator::init(&addr, config::ELEV_NUM_FLOORS)?;
 
     let (new_order_tx, new_order_rx) = cbc::unbounded::<(orders::Orders, orders::HallOrders)>();
-    let (new_state_tx, new_state_rx) = cbc::unbounded::<elevator_controller::state::State>();
-    let (order_completed_tx, order_completed_rx) = cbc::unbounded::<elevio::poll::CallButton>();
+    let (new_state_tx, new_state_rx) = cbc::unbounded::<state::State>();
+    let (order_completed_tx, order_completed_rx) = cbc::unbounded::<poll::CallButton>();
 
     {
         let elevator = elevator.clone();
         spawn(move || {
-            elevator_controller::elevator_fsm::elevator_fsm(
+            elevator_fsm::elevator_fsm(
                 &elevator,
                 new_order_rx,
                 order_completed_tx,
@@ -39,7 +37,7 @@ fn main() -> std::io::Result<()> {
     {
         let elevator = elevator.clone();
         spawn(move || {
-            distributor::distributor::distributor(
+            distributor::distributor(
                 &elevator,
                 elevator_id,
                 new_state_rx,

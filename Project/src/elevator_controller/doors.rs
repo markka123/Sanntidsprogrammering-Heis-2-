@@ -19,7 +19,6 @@ pub fn door(
     loop {
         cbc::select! {
             recv(door_open_rx) -> _ => {
-                // println!("Door open");
                 elevator.door_light(true);
                
                 if is_obstructed {
@@ -31,8 +30,8 @@ pub fn door(
                 }
                 is_door_open = true;
             },
-            recv(obstruction_rx) -> a => {
-                let obstruction_status = a.unwrap();
+            recv(obstruction_rx) -> obstruction_message => {
+                let obstruction_status = obstruction_message.unwrap();
                 obstructed_tx.send(obstruction_status).unwrap();
 
                 is_obstructed = obstruction_status;
@@ -45,7 +44,6 @@ pub fn door(
             },
 
             recv(door_timer) -> _ => {
-                println!("Door closed");
                 is_door_open = false;
                 elevator.door_light(false);
                 door_close_tx.send(true).unwrap();

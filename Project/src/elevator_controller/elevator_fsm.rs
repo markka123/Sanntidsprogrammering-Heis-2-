@@ -1,31 +1,22 @@
-#![allow(dead_code)]
 use crate::config::config;
 use crate::elevator_controller::direction;
 use crate::elevator_controller::doors;
 use crate::elevator_controller::orders;
 use crate::elevator_controller::lights;
-use crate::elevator_controller::state::{State, Behaviour};
-use crate::elevio::elev::{CAB, DIRN_STOP, HALL_DOWN};
-use crate::elevio::{self, elev as e};
+use crate::elevator_controller::state;
+use crate::elevio::elev;
+use crate::elevio::poll;
 
 use std::thread::*;
 use crossbeam_channel as cbc;
 
 pub fn elevator_fsm(
-    elevator: &e::Elevator,
+    elevator: &elev::Elevator,
     new_order_rx: cbc::Receiver<(orders::Orders, orders::HallOrders)>,
-    order_completed_tx: cbc::Sender<elevio::poll::CallButton>,
-    new_state_tx: cbc::Sender<State>,
+    order_completed_tx: cbc::Sender<poll::CallButton>,
+    new_state_tx: cbc::Sender<state::State>,
 ) {
-    let mut state = State {
-        obstructed: false,
-        motorstop: false,
-        offline: false,
-        emergency_stop: false,
-        behaviour: Behaviour::Idle,
-        floor: 0,
-        direction: HALL_DOWN,
-    };
+    let mut state = state::State::init();
 
     let mut elevator_orders = orders::ElevatorOrders::init();
 
@@ -39,19 +30,19 @@ pub fn elevator_fsm(
     let (floor_sensor_tx, floor_sensor_rx) = cbc::unbounded::<u8>();
     {
         let elevator = elevator.clone();
-        spawn(move || elevio::poll::floor_sensor(elevator, floor_sensor_tx, config::POLL_PERIOD));
+        spawn(move || poll::floor_sensor(elevator, floor_sensor_tx, config::POLL_PERIOD));
     }
 
     let (stop_button_tx, stop_button_rx) = cbc::unbounded::<bool>();
     {
         let elevator = elevator.clone();
-        spawn(move || elevio::poll::stop_button(elevator, stop_button_tx, config::POLL_PERIOD));
+        spawn(move || poll::stop_button(elevator, stop_button_tx, config::POLL_PERIOD));
     }
 
     let (obstruction_tx, obstruction_rx) = cbc::unbounded::<bool>();
     {
         let elevator = elevator.clone();
-        spawn(move || elevio::poll::obstruction(elevator, obstruction_tx, config::POLL_PERIOD));
+        spawn(move || poll::obstruction(elevator, obstruction_tx, config::POLL_PERIOD));
     }
 
     {
@@ -67,9 +58,11 @@ pub fn elevator_fsm(
         });
     }
 
-    state.direction = HALL_DOWN;
-    state.behaviour = Behaviour::Moving;
+    state.direction = elev::HALL_DOWN;
+    state.behaviour = state::Behaviour::Moving;
     elevator.motor_direction(direction::call_to_md(state.direction));
+
+    lights::set_lights(&elevator_orders, elevator.clone());
 
     loop {
         cbc::select! {
@@ -83,31 +76,29 @@ pub fn elevator_fsm(
                 }
 
                 match state.behaviour {
-                    Behaviour::Idle => {
+                    state::Behaviour::Idle => {
                         match () {
                             _ if elevator_orders.order_at_floor_in_direction(state.floor, state.direction) => {
-                                state.behaviour = Behaviour::DoorOpen;
+                                state.behaviour = state::Behaviour::DoorOpen;
                                 elevator_orders.order_done(state.floor, state.direction, &order_completed_tx);
                                 door_open_tx.send(true).unwrap();
-                                println!("Case 1");
                                 new_state_tx.send(state.clone()).unwrap();
                             },
                             _ if elevator_orders.order_at_floor_in_direction(state.floor, direction::direction_opposite(state.direction)) => {
-                                state.behaviour = Behaviour::DoorOpen;
+                                state.behaviour = state::Behaviour::DoorOpen;
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator_orders.order_done(state.floor, state.direction, &order_completed_tx);
                                 door_open_tx.send(true).unwrap();
-                                println!("Case 2");
                                 new_state_tx.send(state.clone()).unwrap();
                             },
                             _ if elevator_orders.order_in_direction(state.floor, state.direction) => {
-                                state.behaviour = Behaviour::Moving;
+                                state.behaviour = state::Behaviour::Moving;
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             },
                             _ if elevator_orders.order_in_direction(state.floor, direction::direction_opposite(state.direction)) => {
-                                state.behaviour = Behaviour::Moving;
+                                state.behaviour = state::Behaviour::Moving;
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 new_state_tx.send(state.clone()).unwrap();
@@ -122,22 +113,23 @@ pub fn elevator_fsm(
                             }
                         }
                     },
-                    Behaviour::DoorOpen => {
+                    state::Behaviour::DoorOpen => {
                         if elevator_orders.order_at_floor_in_direction(state.floor, state.direction)  {
                             door_open_tx.send(true).unwrap();
-                            println!("Case 3");
                             elevator_orders.order_done(state.floor, state.direction, &order_completed_tx);
                         }
                     },
-                    Behaviour::Moving => {
+                    state::Behaviour::Moving => {
                     }
                 }
             },
 
-            recv(floor_sensor_rx) -> floor_msg => {
-                let floor = floor_msg.unwrap();
+            recv(floor_sensor_rx) -> floor_message => {
+                let floor = floor_message.unwrap();
                 motor_timer = cbc::never();
-                motorstop_tx.send(false).unwrap();
+                if state.motorstop {
+                    motorstop_tx.send(false).unwrap();
+                }
                 state.floor = floor;
                 elevator.floor_indicator(state.floor);
 
@@ -146,13 +138,12 @@ pub fn elevator_fsm(
                 }
 
                 match state.behaviour {
-                    Behaviour::Moving => {
+                    state::Behaviour::Moving => {
                         match () {
                             _ if elevator_orders.order_at_floor_in_direction(state.floor, state.direction)=> {
-                                state.behaviour = Behaviour::DoorOpen;
-                                elevator.motor_direction(DIRN_STOP);
+                                state.behaviour = state::Behaviour::DoorOpen;
+                                elevator.motor_direction(elev::DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
-                                println!("Case4");
                                 elevator_orders.order_done(floor, state.direction, &order_completed_tx);
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -162,11 +153,10 @@ pub fn elevator_fsm(
                             },
 
                             _ if elevator_orders.order_at_floor_in_direction(state.floor, direction::direction_opposite(state.direction)) => {
-                                state.behaviour = Behaviour::DoorOpen;
+                                state.behaviour = state::Behaviour::DoorOpen;
                                 state.direction = direction::direction_opposite(state.direction);
-                                elevator.motor_direction(DIRN_STOP);
+                                elevator.motor_direction(elev::DIRN_STOP);
                                 door_open_tx.send(true).unwrap(); 
-                                println!("Case 5");
                                 elevator_orders.order_done(floor, state.direction, &order_completed_tx);
                                 new_state_tx.send(state.clone()).unwrap();
                             },
@@ -179,26 +169,24 @@ pub fn elevator_fsm(
                             },
 
                             _ => {
-                                state.behaviour = Behaviour::Idle;
-                                elevator.motor_direction(DIRN_STOP);
+                                state.behaviour = state::Behaviour::Idle;
+                                elevator.motor_direction(elev::DIRN_STOP);
                                 new_state_tx.send(state.clone()).unwrap();
                             }
                         }
-
-
                     },
                     _ => {
-                        //println!("Floor indicator received while in unexpected state")
+                        println!("Floor indicator received while in unexpected state")
                     }
                 }
             },
 
             recv(door_close_rx) -> _ => {
                 match state.behaviour {
-                    Behaviour::DoorOpen => {
+                    state::Behaviour::DoorOpen => {
                         match () {
                             _ if elevator_orders.order_in_direction(state.floor, state.direction) => {
-                                state.behaviour = Behaviour::Moving;
+                                state.behaviour = state::Behaviour::Moving;
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::never();
@@ -206,33 +194,31 @@ pub fn elevator_fsm(
                             _ if elevator_orders.order_at_floor_in_direction(state.floor, direction::direction_opposite(state.direction)) => {
                                 state.direction = direction::direction_opposite(state.direction);
                                 door_open_tx.send(true).unwrap();
-                                println!("Case 6");
                                 new_state_tx.send(state.clone()).unwrap();
                                 elevator_orders.order_done(state.floor, state.direction, &order_completed_tx);
                             },
                             _ if elevator_orders.order_in_direction(state.floor, direction::direction_opposite(state.direction)) => {
-                                state.behaviour = Behaviour::Moving;
+                                state.behaviour = state::Behaviour::Moving;
                                 state.direction = direction::direction_opposite(state.direction);
                                 elevator.motor_direction(direction::call_to_md(state.direction));
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::never();
                             },
                             _ => {
-                                state.behaviour = Behaviour::Idle;
+                                state.behaviour = state::Behaviour::Idle;
                                 new_state_tx.send(state.clone()).unwrap();
                                 motor_timer = cbc::never();
                             }
                         }
 
                     },
-                    Behaviour::Idle => {
+                    state::Behaviour::Idle => {
                         /* if state.emergency_stop {
                             door_open_tx.send(true).unwrap(); // Sikker på dette?
-                            println!("Case 7");
                         } */
                     }
                     _ => {
-                        //println!("Closing doors in unexpected state");
+                        println!("Closing doors in unexpected state");
                     }
                 }
 
@@ -242,39 +228,37 @@ pub fn elevator_fsm(
                 motorstop_tx.send(true).unwrap();
             },
 
-            recv(motorstop_rx) -> motorstop_msg => {
-                let is_motorstop = motorstop_msg.unwrap();
-                if state.motorstop != is_motorstop {
-                    state.motorstop = is_motorstop;
-                    println!("{}", if state.motorstop { "Lost motor power!" } else { "Regained motor power!" } );
-                    new_state_tx.send(state.clone()).unwrap();
-                    
-                }
+            recv(motorstop_rx) -> motorstop_message => {
+                state.motorstop = motorstop_message.unwrap();
+                new_state_tx.send(state.clone()).unwrap();
+                println!("{}", if state.motorstop { "Lost motor power!" } else { "Regained motor power!" } );
             },
 
-            recv(obstructed_rx) -> a => {
-                let is_obstructed = a.unwrap();
-                //println!("\nObstructed: {:#?}\n\n", is_obstructed);
-                if is_obstructed != state.obstructed {
-                    state.obstructed = is_obstructed;
-                    new_state_tx.send(state.clone()).unwrap();
-                }
+            recv(obstructed_rx) -> obstructed_message => {
+                state.obstructed = obstructed_message.unwrap();
+                new_state_tx.send(state.clone()).unwrap();
+                println!("{}", if state.obstructed { "Doors are obstructed." } else { "Doors are no longer obstructed." } );
             },
 
             // Må bestemme oss for stop-knapp funksjonalitet
-            recv(stop_button_rx) -> a => {
-                let is_emergency_stop = a.unwrap();
+            recv(stop_button_rx) -> stop_button_message => {
+                let is_emergency_stop = stop_button_message.unwrap();
 
                 if is_emergency_stop && !state.emergency_stop {
-                    state.behaviour = Behaviour::Idle;
+                    state.behaviour = state::Behaviour::Idle;
                     state.emergency_stop = true;
-                    elevator.motor_direction(DIRN_STOP);
+                    elevator.motor_direction(elev::DIRN_STOP);
                     motor_timer = cbc::never();
                     new_state_tx.send(state.clone()).unwrap();
+                    println!("Emergency stop activated");
                 }
                 else if is_emergency_stop && state.emergency_stop {
                     state.emergency_stop = false;
+                    state.behaviour = state::Behaviour::Idle;
+                    state.emergency_stop = true;
+                    elevator.motor_direction(elev::DIRN_STOP);
                     new_state_tx.send(state.clone()).unwrap();
+                    println!("Emergency stop deactivated");
                 }
                 elevator.stop_button_light(state.emergency_stop);
             }

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-// PACKAGES
 use crate::elevator_controller::orders;
 use crate::elevator_controller::direction;
 use crate::elevator_controller::state;
@@ -7,7 +5,6 @@ use crate::elevator_controller::state;
 use std::process::{Command, Stdio};
 use serde_json::{json};
 
-//ASSIGN_REQUESTS
 pub fn assign_orders(
     states: &state::States,
     cab_requests: &orders::CabOrders,
@@ -23,7 +20,7 @@ pub fn assign_orders(
         let state_variables = json!({
             "behaviour": state::behaviour_to_string(state.behaviour),
             "floor": state.floor.to_string(),
-            "direction": direction::direction_to_string(state.direction), // fix when an elevator should have dir stop
+            "direction": direction::direction_to_string(state.direction),
             "cabRequests": cab_requests[id],
         });
     
@@ -36,12 +33,9 @@ pub fn assign_orders(
     });
 
     let json_input_string = json_input.to_string();
-    // //println!("JSON Input:\n{}", json_input_string);
 
-    // Path to the executable
     let executable_path = "src/cost_function/executables/hall_request_assigner";
 
-    // Call the executable using command-line arguments
     let output = Command::new(executable_path)
         .args(&["-i", &json_input_string, "--includeCab"])
         .stdout(Stdio::piped())
