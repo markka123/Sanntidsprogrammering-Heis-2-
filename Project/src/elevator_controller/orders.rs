@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 use crate::config::config;
 use crate::elevio::elev::{CAB, HALL_DOWN, HALL_UP};
-use crate::elevio::poll::CallButton;
+use crate::elevio::poll;
+
 use crossbeam_channel as cbc;
+use std::collections::HashMap;
 
 pub type Orders = [[bool; 3]; config::ELEV_NUM_FLOORS as usize];
 pub type HallOrders = [[bool; 2]; config::ELEV_NUM_FLOORS as usize];
@@ -45,7 +47,7 @@ impl AllOrders {
             offline_orders,
         }
     }
-    pub fn add_order(&mut self, call_button: CallButton, elevator_id: u8) {
+    pub fn add_order(&mut self, call_button: poll::CallButton, elevator_id: u8) {
         if call_button.call == CAB {
             self.cab_orders[elevator_id as usize][call_button.floor as usize] = true;
         } else if call_button.call == HALL_DOWN || call_button.call == HALL_UP {
@@ -55,7 +57,7 @@ impl AllOrders {
         }
     }
 
-    pub fn remove_order(&mut self, call_button: CallButton, elevator_id: u8) {
+    pub fn remove_order(&mut self, call_button: poll::CallButton, elevator_id: u8) {
         if call_button.call == CAB {
             self.cab_orders[elevator_id as usize][call_button.floor as usize] = false;
         } else if call_button.call == HALL_DOWN || call_button.call == HALL_UP {
@@ -104,15 +106,15 @@ pub fn order_done(
     floor: u8,
     direction: u8,
     orders: Orders,
-    order_completed_tx: &cbc::Sender<CallButton>,
+    order_completed_tx: &cbc::Sender<poll::CallButton>,
 ) {
     if orders[floor as usize][direction as usize] {
-        let _ = order_completed_tx.send(CallButton {
+        let _ = order_completed_tx.send(poll::CallButton {
             floor,
             call: direction,
         });
     }
     if orders[floor as usize][CAB as usize] {
-        let _ = order_completed_tx.send(CallButton { floor, call: CAB });
+        let _ = order_completed_tx.send(poll::CallButton { floor, call: CAB });
     }
 }
