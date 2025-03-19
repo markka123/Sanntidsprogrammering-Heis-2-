@@ -62,15 +62,19 @@ pub fn fetch_command_line_args() -> (u16, u8) {
     let default_port = 15657;
     let default_elevator_id = 0;
 
-    let command_line_args: Vec<String> = env::args().collect();
+    let mut port = default_port;
+    let mut elevator_id = default_elevator_id;
 
-    let port = command_line_args.get(1)
-        .and_then(|s| s.parse::<u16>().ok())
-        .unwrap_or(default_port);
-
-    let elevator_id = command_line_args.get(2)
-        .and_then(|s| s.parse::<u8>().ok())
-        .unwrap_or(default_elevator_id);
-
+    for arg in env::args().skip(1) {
+        if let Some(value) = arg.strip_prefix("port=") {
+            if let Ok(parsed_port) = value.parse::<u16>() {
+                port = parsed_port;
+            }
+        } else if let Some(value) = arg.strip_prefix("id=") {
+            if let Ok(parsed_id) = value.parse::<u8>() {
+                elevator_id = parsed_id;
+            }
+        }
+    }
     (port, elevator_id)
 }

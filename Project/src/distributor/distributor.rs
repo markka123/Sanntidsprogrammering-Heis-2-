@@ -55,15 +55,7 @@ pub fn distributor(
     let socket_receiver = Arc::clone(&socket);
     let socket_transmitter = Arc::clone(&socket);
     
-    let mut states: state::States = std::array::from_fn(|_| state::State {
-        obstructed: false,
-        motorstop: false,
-        offline: false,
-        emergency_stop: false,
-        behaviour: state::Behaviour::Idle,
-        floor: 0,
-        direction: e::HALL_DOWN,
-    });
+    let mut states: state::States = std::array::from_fn(|_| state::State::init());
 
     let (message_tx, message_rx) = cbc::unbounded::<Message>();
     let (is_online_tx, is_online_rx) = cbc::unbounded::<bool>();
@@ -167,9 +159,7 @@ pub fn distributor(
                         distributor_orders.assigned_orders_map = serde_json::from_value(all_assigned_orders_str).unwrap();
                         let new_hall_orders = distributor_orders.get_assigned_hall_orders();
 
-                        let elevator_is_availible = states[elevator_id as usize].motorstop || states[elevator_id as usize].emergency_stop || states[elevator_id as usize].obstructed || states[elevator_id as usize].offline;
-
-                        if !elevator_is_availible {
+                        if states[elevator_id as usize].is_availible() {
                             if let Some(new_elevator_orders) = distributor_orders.assigned_orders_map.get(&elevator_id) {
                                 if (*new_elevator_orders != distributor_orders.elevator_orders)  || (new_hall_orders != previous_hall_orders) {
                                     distributor_orders.elevator_orders = *new_elevator_orders;
