@@ -156,12 +156,13 @@ pub fn distributor(
                     },
                     Ok(Message::AllAssignedOrdersMsg((master_id, all_assigned_orders_str))) => {
                         let previous_hall_orders = distributor_orders.get_assigned_hall_orders();
+                        let previous_elevator_orders = distributor_orders.elevator_orders;
                         distributor_orders.assigned_orders_map = serde_json::from_value(all_assigned_orders_str).unwrap();
                         let new_hall_orders = distributor_orders.get_assigned_hall_orders();
 
                         if states[elevator_id as usize].is_availible() {
                             if let Some(new_elevator_orders) = distributor_orders.assigned_orders_map.get(&elevator_id) {
-                                if (*new_elevator_orders != distributor_orders.elevator_orders)  || (new_hall_orders != previous_hall_orders) {
+                                if (*new_elevator_orders != previous_elevator_orders)  || (new_hall_orders != previous_hall_orders) {
                                     distributor_orders.elevator_orders = *new_elevator_orders;
                                     distributor_orders.hall_orders = new_hall_orders;
                                     new_order_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
