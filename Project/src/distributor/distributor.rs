@@ -131,17 +131,17 @@ pub fn distributor(
                         let previous_elevator_orders = distributor_orders.elevator_orders;
                         
                         distributor_orders.assigned_orders_map = serde_json::from_value(all_assigned_orders_string).unwrap();
-                        let new_hall_orders = distributor_orders.get_assigned_hall_orders();
+                        distributor_orders.hall_orders = distributor_orders.get_assigned_hall_orders();
 
-                        if states[elevator_id as usize].is_availible() {
-                            if let Some(new_elevator_orders) = distributor_orders.assigned_orders_map.get(&elevator_id) {
-                                if (*new_elevator_orders != previous_elevator_orders) || (new_hall_orders != previous_hall_orders) {
-                                    distributor_orders.elevator_orders = *new_elevator_orders;
-                                    distributor_orders.hall_orders = new_hall_orders;
-                                    new_order_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
-                                }
-                            }
+                        if let Some(new_elevator_orders) = distributor_orders.assigned_orders_map.get(&elevator_id) {
+                            distributor_orders.elevator_orders = *new_elevator_orders;
                         }
+
+                        let change_in_orders = distributor_orders.hall_orders != previous_hall_orders || distributor_orders.elevator_orders != previous_elevator_orders;
+                        if change_in_orders {
+                            new_order_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                        }
+
                         distributor_orders.confirm_orders(elevator_id);
                     }
                     Err(e) => {
@@ -158,17 +158,17 @@ pub fn distributor(
             },
             recv(check_heartbeat_ticker) -> _ => {
                 let now = Instant::now();
+                if (now.duration_since(last_received_heartbeat[elevator_id as usize]) > config::NETWORK_TIMER_DURATION) && !states[elevator_id as usize].offline {
+                    states[elevator_id as usize].offline = true;
+                    distributor_orders.init_offline_operation(elevator_id);
+                    master_ticker = cbc::never();
+                    new_order_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                    println!("Lost network connection - starting offline operation");
+                }
                 for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
-                    if now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION {
-                        if !states[id].offline {
-                            println!("Elevator {} has gone offline", id);
-                            states[id].offline = true;
-                        }
-                        if id == (elevator_id as usize) {
-                            distributor_orders.init_offline_operation(elevator_id);
-                            new_order_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
-                            master_ticker = cbc::never();
-                        }
+                    if (now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION) && (!states[id].offline && !states[elevator_id as usize].offline) {
+                        println!("Elevator {} has gone offline", id);
+                        states[id].offline = true;
                     }
                 }
             }
