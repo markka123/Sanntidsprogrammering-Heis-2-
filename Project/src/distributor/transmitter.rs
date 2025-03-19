@@ -1,10 +1,8 @@
-#![allow(dead_code)]
 use crate::config::config;
-use crate::elevio::elev;
 use crate::elevator_controller::state;
 use crate::elevio::poll;
 use crate::network::udp;
-use crate::distributor::distributor;
+use crate::distributor::udp_message;
 
 use crossbeam_channel as cbc;
 use std::net;
@@ -15,7 +13,7 @@ pub fn transmitter(
     elevator_id: u8,
     new_state_rx: cbc::Receiver<state::State>,
     master_transmit_rx: cbc::Receiver<String>,
-    call_msg_rx: cbc::Receiver<(u8, poll::CallButton)>,
+    call_message_rx: cbc::Receiver<(u8, poll::CallButton)>,
     socket: sync::Arc<net::UdpSocket>,
 ) {
     let mut state: state::State = state::State::init();
@@ -24,31 +22,31 @@ pub fn transmitter(
 
     loop {
         cbc::select! {
-            recv(new_state_rx) -> a => {
-                let new_state = a.unwrap();
+            recv(new_state_rx) -> state_message => {
+                let new_state = state_message.unwrap();
                 state = new_state;
             },
-            recv(call_msg_rx) -> a => {
-                let (msg_type, call) = a.unwrap();
-                let msg = distributor::Message::CallMsg((elevator_id, [msg_type, call.floor, call.call]));
-                broadcast_message(&socket, &msg);
+            recv(call_message_rx) -> order_message => {
+                let (message_type, call) = order_message.unwrap();
+                let message = udp_message::UdpMessage::Order((elevator_id, [message_type, call.floor, call.call]));
+                broadcast_message(&socket, &message);
             },
             recv(state_ticker) -> _ => {
-                let msg = distributor::Message::StateMsg((elevator_id, state.clone()));
-                broadcast_message(&socket, &msg);
+                let message = udp_message::UdpMessage::State((elevator_id, state.clone()));
+                broadcast_message(&socket, &message);
             },
-            recv(master_transmit_rx) -> a => {
-                let assigned_orders_str = a.unwrap();
-                let all_assigned_orders_str: serde_json::Value = serde_json::from_str(&assigned_orders_str).expect("Failed");
-                let msg = distributor::Message::AllAssignedOrdersMsg((elevator_id, all_assigned_orders_str));
+            recv(master_transmit_rx) -> assigned_orders_message => {
+                let assigned_orders_string = assigned_orders_message.unwrap();
+                let all_assigned_orders_string: serde_json::Value = serde_json::from_str(&assigned_orders_string).expect("Failed");
+                let message = udp_message::UdpMessage::AllAssignedOrders((elevator_id, all_assigned_orders_string));
 
-                broadcast_message(&socket, &msg);
+                broadcast_message(&socket, &message);
             }
         }
     }
 }
 
-pub fn broadcast_message(socket: &sync::Arc<net::UdpSocket>, message: &distributor::Message) {
+pub fn broadcast_message(socket: &sync::Arc<net::UdpSocket>, message: &udp_message::UdpMessage) {
     let message_json = serde_json::to_string(message).unwrap();
     let _ = udp::broadcast_udp_message(&socket, &message_json);
 }

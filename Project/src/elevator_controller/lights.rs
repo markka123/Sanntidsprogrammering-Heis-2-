@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use crate::config::config;
 use crate::elevio::elev as e;
 use crate::elevator_controller::orders;
