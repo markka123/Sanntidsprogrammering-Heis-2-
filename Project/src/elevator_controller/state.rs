@@ -3,7 +3,7 @@ use crate::elevio::elev;
 
 use serde;
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Behaviour {
     Idle,
     Moving,

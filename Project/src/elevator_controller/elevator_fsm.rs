@@ -68,6 +68,7 @@ pub fn elevator_fsm(
     loop {
         cbc::select! {
             recv(new_order_rx) -> new_order_tuple => {
+                println!("Received new order");
                 (elevator_orders.orders, elevator_orders.hall_orders) = new_order_tuple.unwrap();
             
                 lights::set_lights(&elevator_orders, elevator.clone());
@@ -246,7 +247,6 @@ pub fn elevator_fsm(
                 let is_emergency_stop = stop_button_message.unwrap();
 
                 if is_emergency_stop && !state.emergency_stop {
-                    state.behaviour = state::Behaviour::Idle;
                     state.emergency_stop = true;
                     elevator.motor_direction(elev::DIRN_STOP);
                     motor_timer = cbc::never();
@@ -255,8 +255,9 @@ pub fn elevator_fsm(
                 }
                 else if is_emergency_stop && state.emergency_stop {
                     state.emergency_stop = false;
-                    state.behaviour = state::Behaviour::Idle;
-                    elevator.motor_direction(elev::DIRN_STOP);
+                    if state.behaviour == state::Behaviour::Moving {
+                        elevator.motor_direction(direction::call_to_md(state.direction));
+                    }
                     new_state_tx.send(state.clone()).unwrap();
                     println!("Emergency stop deactivated");
                 }
