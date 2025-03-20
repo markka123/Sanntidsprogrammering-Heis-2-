@@ -70,14 +70,13 @@ impl AllOrders {
                 elev::HALL_UP | elev::HALL_DOWN => match order_type {
                     &NEW_ORDER => !order_is_assigned(order.floor as usize, order.call as usize),
                     &COMPLETED_ORDER => {
-                        order_is_unassigned(order.floor as usize, order.call as usize)
+                        !order_is_unassigned(order.floor as usize, order.call as usize)
                     }
                     _ => true,
                 },
                 elev::CAB => {
                     if let Some(assigned_orders) = assigned_orders_map.get(&elevator_id) {
-                        let cab_is_assigned =
-                            assigned_orders[order.floor as usize][order.call as usize];
+                        let cab_is_assigned = assigned_orders[order.floor as usize][order.call as usize];
                         return !((cab_is_assigned && *order_type == NEW_ORDER)
                             || (!cab_is_assigned && *order_type == COMPLETED_ORDER));
                     }

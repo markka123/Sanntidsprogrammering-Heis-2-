@@ -84,6 +84,8 @@ pub fn distributor(
                 let order_completed = order_completed.unwrap();
                 let message_type = all_orders::COMPLETED_ORDER;
 
+                distributor_orders.unconfirmed_orders.push((message_type, order_completed.clone()));
+
                 if states[elevator_id as usize].offline {
                     distributor_orders.elevator_orders[order_completed.floor as usize][order_completed.call as usize] = false;
                     distributor_orders.remove_order(order_completed.clone(), elevator_id);
@@ -95,6 +97,7 @@ pub fn distributor(
             recv(unconfirmed_orders_ticker) -> _ => {
                 distributor_orders.unconfirmed_orders.iter().for_each(|(message_type, call)| {
                     call_message_tx.send((*message_type, call.clone())).unwrap();
+                    println!("Uncomfirmed");
                 });
             }
             recv(message_rx) -> udp_message => {
@@ -110,6 +113,7 @@ pub fn distributor(
                                 distributor_orders.add_order(new_order, id);
                             },
                             all_orders::COMPLETED_ORDER => {
+                                println!("motatt");
                                 distributor_orders.remove_order(new_order, id);
                             },
                             _ => {

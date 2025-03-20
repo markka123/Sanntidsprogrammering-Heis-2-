@@ -10,3 +10,8 @@ pub enum UdpMessage {
     State((u8, state::State)),
     AllAssignedOrders((u8, serde_json::Value)),
 }
+
+pub fn broadcast_udp_message(socket: &sync::Arc<net::UdpSocket>, message: &udp_message::UdpMessage) {
+    let message_json = serde_json::to_string(message).unwrap();
+    let _ = udp::broadcast_udp_message(&socket, &message_json);
+}
