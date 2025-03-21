@@ -12,8 +12,9 @@ use crossbeam_channel as cbc;
 
 pub fn elevator_fsm(
     elevator: &elev::Elevator,
-    new_order_rx: cbc::Receiver<(orders::Orders, orders::HallOrders)>,
+    elevator_orders_rx: cbc::Receiver<(orders::Orders, orders::HallOrders)>,
     order_completed_tx: cbc::Sender<poll::CallButton>,
+    order_new_tx: cbc::Sender<poll::CallButton>,
     new_state_tx: cbc::Sender<state::State>,
 ) {
     let mut state = state::State::init();
@@ -24,8 +25,14 @@ pub fn elevator_fsm(
 
     let (door_open_tx, door_open_rx) = cbc::unbounded::<bool>();
     let (door_close_tx, door_close_rx) = cbc::unbounded::<bool>();
-    let (obstructed_tx, obstructed_rx) = cbc::unbounded::<bool>();
     let (motorstop_tx, motorstop_rx) = cbc::unbounded::<bool>();
+    let (obstructed_tx, obstructed_rx) = cbc::unbounded::<bool>();
+
+    let (call_button_tx, call_button_rx) = cbc::unbounded::<poll::CallButton>();
+    {
+        let elevator = elevator.clone();
+        spawn(move || poll::call_buttons(elevator, call_button_tx, config::POLL_PERIOD));
+    }
     
     let (floor_sensor_tx, floor_sensor_rx) = cbc::unbounded::<u8>();
     {
@@ -66,15 +73,11 @@ pub fn elevator_fsm(
 
     loop {
         cbc::select! {
-            recv(new_order_rx) -> new_order_tuple => {
+            recv(elevator_orders_rx) -> new_order_tuple => {
                 (elevator_orders.orders, elevator_orders.hall_orders) = new_order_tuple.unwrap();
             
-                lights::set_lights(&elevator_orders, elevator.clone());
-
-                if state.emergency_stop {
-                    continue;
-                }
-
+                lights::set_lights(&elevator_orders, elevator.clone()); 
+                
                 match state.behaviour {
                     state::Behaviour::Idle => {
                         match () {
@@ -105,8 +108,7 @@ pub fn elevator_fsm(
                                 motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             }
                             _ if elevator_orders.orders[state.floor as usize].iter().all(|&x| x == false) => {
-                                continue;
-                                
+                                continue;  
                             }
                             () => {
                                 println!("Handling new order in unexpected state.")
@@ -123,7 +125,10 @@ pub fn elevator_fsm(
                     }
                 }
             },
-
+            recv(call_button_rx) -> call_button => {
+                let call_button = call_button.unwrap(); 
+                order_new_tx.send(call_button).unwrap();
+            },
             recv(floor_sensor_rx) -> floor_message => {
                 let floor = floor_message.unwrap();
                 motor_timer = cbc::never();

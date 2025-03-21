@@ -18,9 +18,11 @@ use std::time::*;
 pub fn distributor(
     elevator: &elev::Elevator,
     elevator_id: u8,
-    new_state_rx: cbc::Receiver<state::State>,
+    elevator_orders_tx: cbc::Sender<(orders::Orders, orders::HallOrders)>,
     order_completed_rx: cbc::Receiver<poll::CallButton>,
-    new_order_tx: cbc::Sender<(orders::Orders, orders::HallOrders)>,
+    order_new_rx: cbc::Receiver<poll::CallButton>,
+    new_state_rx: cbc::Receiver<state::State>,
+    
 ) {
     let mut distributor_orders = all_orders::AllOrders::init();
     let mut states: state::States = std::array::from_fn(|_| state::State::init());
@@ -38,14 +40,7 @@ pub fn distributor(
     let (message_tx, message_rx) = cbc::unbounded::<udp_message::UdpMessage>();
     let (master_transmit_tx, master_transmit_rx) = cbc::unbounded::<String>();
     let (master_activate_tx, master_activate_rx) = cbc::unbounded::<bool>();
-    let (call_button_tx, call_button_rx) = cbc::unbounded::<poll::CallButton>();
     let (call_message_tx, call_message_rx) = cbc::unbounded::<(u8, poll::CallButton)>();
-
-    {
-        let elevator = elevator.clone();
-        spawn(move || poll::call_buttons(elevator, call_button_tx, config::POLL_PERIOD));
-    }
-
     {
         spawn(move || {
             receiver::receiver(message_tx, master_activate_tx, socket_receiver, elevator_id)
@@ -54,31 +49,25 @@ pub fn distributor(
 
     {
         spawn(move || {
-            transmitter::transmitter(
-                elevator_id,
-                new_state_rx,
-                master_transmit_rx,
-                call_message_rx,
-                socket_transmitter,
-            )
+            transmitter::transmitter(elevator_id, new_state_rx, master_transmit_rx, call_message_rx, socket_transmitter)
         });
     }
 
     loop {
         cbc::select! {
-            recv(call_button_rx) -> order => {
-                let order = order.unwrap();
+            recv(order_new_rx) -> order_new => {
+                let order_new = order_new.unwrap();
                 let message_type = all_orders::NEW_ORDER;
 
-                distributor_orders.unconfirmed_orders.push((message_type, order.clone()));
+                distributor_orders.unconfirmed_orders.push((message_type, order_new.clone()));
 
                 if states[elevator_id as usize].offline {
-                    distributor_orders.elevator_orders[order.floor as usize][order.call as usize] = true;
-                    distributor_orders.add_order(order.clone(), elevator_id);
-                    new_order_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                    distributor_orders.elevator_orders[order_new.floor as usize][order_new.call as usize] = true;
+                    distributor_orders.add_order(order_new.clone(), elevator_id);
+                    elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                 }
 
-                call_message_tx.send((message_type, order)).unwrap();
+                call_message_tx.send((message_type, order_new)).unwrap();
             },
             recv(order_completed_rx) -> order_completed => {
                 let order_completed = order_completed.unwrap();
@@ -90,7 +79,7 @@ pub fn distributor(
                     distributor_orders.elevator_orders[order_completed.floor as usize][order_completed.call as usize] = false;
                     distributor_orders.remove_order(order_completed.clone(), elevator_id);
                     distributor_orders.confirm_offline_order(order_completed.clone());
-                    new_order_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                    elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                 }
                 call_message_tx.send((message_type, order_completed)).unwrap();
             },
@@ -143,7 +132,7 @@ pub fn distributor(
 
                         let change_in_orders = distributor_orders.hall_orders != previous_hall_orders || distributor_orders.elevator_orders != previous_elevator_orders;
                         if change_in_orders {
-                            new_order_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                            elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                         }
 
                         distributor_orders.confirm_orders(elevator_id);
@@ -171,7 +160,7 @@ pub fn distributor(
                     states[elevator_id as usize].offline = true;
                     distributor_orders.init_offline_operation(elevator_id);
                     master_ticker = cbc::never();
-                    new_order_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                    elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                     println!("Lost network connection - starting offline operation");
                 }
                 for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
