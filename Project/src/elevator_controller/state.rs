@@ -12,7 +12,7 @@ pub enum Behaviour {
 }
 
 impl Behaviour {
-    pub fn behaviour_to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         match self {
             Behaviour::Idle => "idle".to_string(),
             Behaviour::Moving => "moving".to_string(),

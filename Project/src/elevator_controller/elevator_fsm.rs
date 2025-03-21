@@ -145,28 +145,22 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(elev::DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 elevator_orders.order_done(floor, state.direction, &order_completed_tx);
-                                new_state_tx.send(state.clone()).unwrap();
                             },
                             _ if elevator_orders.orders[state.floor as usize][elev::CAB as usize] && elevator_orders.order_in_direction(state.floor, state.direction) => {
                                 state.behaviour = state::Behaviour::DoorOpen;
                                 elevator.motor_direction(elev::DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 elevator_orders.order_done(floor, state.direction, &order_completed_tx);
-                                new_state_tx.send(state.clone()).unwrap();
                             },
                             _ if elevator_orders.orders[state.floor as usize][elev::CAB as usize] && !elevator_orders.orders[state.floor as usize][state.direction.opposite() as usize] => {
                                 state.behaviour = state::Behaviour::DoorOpen;
                                 elevator.motor_direction(elev::DIRN_STOP);
                                 door_open_tx.send(true).unwrap();
                                 elevator_orders.order_done(floor, state.direction, &order_completed_tx);
-                                new_state_tx.send(state.clone()).unwrap();
                             },
-                            _ if elevator_orders.order_at_floor_in_direction(state.floor, state.direction) => {
-                                state.behaviour = state::Behaviour::DoorOpen;
-                                elevator.motor_direction(elev::DIRN_STOP);
-                                door_open_tx.send(true).unwrap();
-                                elevator_orders.order_done(floor, state.direction, &order_completed_tx);
-                                new_state_tx.send(state.clone()).unwrap();
+                            _ if elevator_orders.order_in_direction(state.floor, state.direction) => {
+                                elevator.motor_direction(state.direction.to_motor_direction());
+                                motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             },
                             _ if elevator_orders.order_at_floor_in_direction(state.floor, state.direction.opposite()) => {
                                 state.behaviour = state::Behaviour::DoorOpen;
@@ -174,18 +168,15 @@ pub fn elevator_fsm(
                                 elevator.motor_direction(elev::DIRN_STOP);
                                 door_open_tx.send(true).unwrap(); 
                                 elevator_orders.order_done(floor, state.direction, &order_completed_tx);
-                                new_state_tx.send(state.clone()).unwrap();
                             },
                             _ if elevator_orders.order_in_direction(state.floor, state.direction.opposite()) => {
                                 state.direction = state.direction.opposite();
-                                new_state_tx.send(state.clone()).unwrap();
                                 elevator.motor_direction(state.direction.to_motor_direction());
                                 motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                             },
                             _ => {
                                 state.behaviour = state::Behaviour::Idle;
                                 elevator.motor_direction(elev::DIRN_STOP);
-                                new_state_tx.send(state.clone()).unwrap();
                             }
                         }
                     },
@@ -193,6 +184,7 @@ pub fn elevator_fsm(
                         println!("Floor indicator received while in unexpected state")
                     }
                 }
+                new_state_tx.send(state.clone()).unwrap();
             },
 
             recv(door_close_rx) -> _ => {

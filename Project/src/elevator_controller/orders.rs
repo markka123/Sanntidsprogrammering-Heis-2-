@@ -66,7 +66,7 @@ impl ElevatorOrders {
         if self.orders[floor as usize][direction as usize] {
             let _ = order_completed_tx.send(poll::CallButton {
                 floor,
-                call: direction,
+                call: direction as u8,
             });
         }
         if self.orders[floor as usize][elev::CAB as usize] {
