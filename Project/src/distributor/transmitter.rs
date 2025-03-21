@@ -29,17 +29,17 @@ pub fn transmitter(
             recv(call_message_rx) -> order_message => {
                 let (message_type, call) = order_message.unwrap();
                 let message = udp_message::UdpMessage::Order((elevator_id, [message_type, call.floor, call.call]));
-                udp_message::broadcast_message(&socket, &message);
+                udp_message::broadcast_udp_message(&socket, &message);
             },
             recv(state_ticker) -> _ => {
                 let message = udp_message::UdpMessage::State((elevator_id, state.clone()));
-                udp_message::broadcast_message(&socket, &message);
+                udp_message::broadcast_udp_message(&socket, &message);
             },
             recv(master_transmit_rx) -> assigned_orders_message => {
                 let assigned_orders_string = assigned_orders_message.unwrap();
                 let all_assigned_orders_string: serde_json::Value = serde_json::from_str(&assigned_orders_string).expect("Failed");
                 let message = udp_message::UdpMessage::AllAssignedOrders((elevator_id, all_assigned_orders_string));
-                udp_message::broadcast_message(&socket, &message);
+                udp_message::broadcast_udp_message(&socket, &message);
             }
         }
     }

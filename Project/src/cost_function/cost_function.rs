@@ -10,7 +10,6 @@ pub fn assign_orders(
     cab_requests: &orders::CabOrders,
     hall_requests: &orders::HallOrders,
 ) -> String{
-
     let mut states_map = serde_json::Map::new();
 
     for (id, state) in states.iter().enumerate() {
@@ -18,9 +17,9 @@ pub fn assign_orders(
             continue;
         }
         let state_variables = json!({
-            "behaviour": state::behaviour_to_string(state.behaviour),
+            "behaviour": state.behaviour.to_string(),
             "floor": state.floor.to_string(),
-            "direction": direction::direction_to_string(state.direction),
+            "direction": state.direction.to_string(),
             "cabRequests": cab_requests[id],
         });
     

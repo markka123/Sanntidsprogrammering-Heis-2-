@@ -1,6 +1,7 @@
 use crate::config::config;
 use crate::elevio::elev;
 use crate::elevio::poll;
+use crate::elevator_controller::direction;
 
 use crossbeam_channel as cbc;
 
@@ -25,14 +26,14 @@ impl ElevatorOrders {
         }
     }
 
-    pub fn order_at_floor_in_direction(&mut self, floor: u8, direction: u8) -> bool {
-        self.orders[floor as usize][(direction) as usize]
+    pub fn order_at_floor_in_direction(&mut self, floor: u8, direction: direction::Direction) -> bool {
+        self.orders[floor as usize][direction as usize]
             || self.orders[floor as usize][elev::CAB as usize]
     }
 
-    pub fn order_in_direction(&mut self, floor: u8, dir: u8) -> bool {
-        match dir {
-            elev::HALL_UP => {
+    pub fn order_in_direction(&mut self, floor: u8, direction: direction::Direction) -> bool {
+        match direction {
+            direction::Direction::Up => {
                 for f in (floor + 1)..config::ELEV_NUM_FLOORS {
                     for b in 0..config::ELEV_NUM_BUTTONS {
                         if self.orders[f as usize][b as usize] {
@@ -42,7 +43,7 @@ impl ElevatorOrders {
                 }
                 false
             }
-            elev::HALL_DOWN => {
+            direction::Direction::Down => {
                 for f in (0..floor).rev() {
                     for b in 0..config::ELEV_NUM_BUTTONS {
                         if self.orders[f as usize][b as usize] {
@@ -59,7 +60,7 @@ impl ElevatorOrders {
     pub fn order_done(
         &mut self,
         floor: u8,
-        direction: u8,
+        direction: direction::Direction,
         order_completed_tx: &cbc::Sender<poll::CallButton>,
     ) {
         if self.orders[floor as usize][direction as usize] {

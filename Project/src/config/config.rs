@@ -9,7 +9,7 @@ pub const ELEV_ID: u8 = 0;
 
 pub const DOOR_TIMER_DURATION: Duration = Duration::from_secs(3);
 pub const MOTOR_TIMER_DURATION: Duration = Duration::from_secs(4);
-pub const MASTER_TIMER_DURATION: Duration = Duration::from_secs(3);
+pub const MASTER_TIMER_DURATION: Duration = Duration::from_secs(2);
 pub const NETWORK_TIMER_DURATION: Duration = Duration::from_secs(1);
 
 pub const POLL_PERIOD: Duration = Duration::from_millis(25);

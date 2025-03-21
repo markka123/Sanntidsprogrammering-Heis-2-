@@ -13,7 +13,7 @@ pub fn receiver(
     socket: sync::Arc<net::UdpSocket>,
     elevator_id: u8
 ) {
-    let mut master_id = config::ELEV_NUM_ELEVATORS;
+    let mut master_id = config::ELEV_NUM_ELEVATORS-1;
     let mut master_timer = cbc::after(config::MASTER_TIMER_DURATION);
 
     loop {
