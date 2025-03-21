@@ -86,7 +86,7 @@ pub fn distributor(
             recv(unconfirmed_orders_ticker) -> _ => {
                 distributor_orders.unconfirmed_orders.iter().for_each(|(message_type, call)| {
                     call_message_tx.send((*message_type, call.clone())).unwrap();
-                    println!("Uncomfirmed");
+
                 });
             }
             recv(message_rx) -> udp_message => {
@@ -102,7 +102,7 @@ pub fn distributor(
                                 distributor_orders.add_order(new_order, id);
                             },
                             all_orders::COMPLETED_ORDER => {
-                                println!("motatt");
+                   
                                 distributor_orders.remove_order(new_order, id);
                             },
                             _ => {

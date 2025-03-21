@@ -82,7 +82,6 @@ impl Elevator {
         sock.read(&mut buf).unwrap();
         buf[1] != 0
     }
-
     pub fn obstruction(&self) -> bool {
         let mut buf = [9, 0, 0, 0];
         let mut sock = self.socket.lock().unwrap();

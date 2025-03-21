@@ -15,7 +15,7 @@ pub const NETWORK_TIMER_DURATION: Duration = Duration::from_secs(1);
 pub const POLL_PERIOD: Duration = Duration::from_millis(25);
 pub const UDP_POLL_PERIOD: Duration = Duration::from_millis(1);
 
-pub const UNCONFIRMED_ORDERS_TRANSMIT_PERIOD: Duration = Duration::from_millis(100);  // fix
+pub const UNCONFIRMED_ORDERS_TRANSMIT_PERIOD: Duration = Duration::from_millis(60);  // fix
 pub const STATE_TRANSMIT_PERIOD: Duration = Duration::from_millis(20);  // fix
 pub const MASTER_TRANSMIT_PERIOD: Duration = Duration::from_millis(40);  // fix
 

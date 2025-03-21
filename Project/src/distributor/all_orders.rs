@@ -104,6 +104,7 @@ impl AllOrders {
     }
 
     pub fn init_offline_operation(&mut self, id: u8) {
+
         for (order_type, order) in self.unconfirmed_orders.iter() {
             if *order_type == NEW_ORDER {
                 self.elevator_orders[order.floor as usize][order.call as usize] = true;
@@ -114,6 +115,11 @@ impl AllOrders {
             self.elevator_orders[floor as usize][elev::CAB as usize] = *order;
             floor += 1;
         }
-        self.hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
+        for floor in 0..config::ELEV_NUM_FLOORS {
+            for call in 0..(config::ELEV_NUM_BUTTONS-1) {
+                self.hall_orders[floor as usize][call as usize] = self.elevator_orders[floor as usize][call as usize];
+            }
+        }
+
     }
 }
