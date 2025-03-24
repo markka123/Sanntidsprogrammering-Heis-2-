@@ -1,7 +1,7 @@
 use crate::config::config;
 use crate::elevio::elev;
 use crate::elevio::poll;
-use crate::elevator_controller::direction;
+use crate::elevator_controller::state;
 
 use crossbeam_channel as cbc;
 
@@ -26,27 +26,27 @@ impl ElevatorOrders {
         }
     }
 
-    pub fn order_at_floor_in_direction(&mut self, floor: u8, direction: direction::Direction) -> bool {
+    pub fn order_at_floor_in_direction(&mut self, floor: u8, direction: state::Direction) -> bool {
         self.orders[floor as usize][direction as usize]
             || self.orders[floor as usize][elev::CAB as usize]
     }
 
-    pub fn order_in_direction(&mut self, floor: u8, direction: direction::Direction) -> bool {
+    pub fn order_in_direction(&mut self, current_floor: u8, direction: state::Direction) -> bool {
         match direction {
-            direction::Direction::Up => {
-                for f in (floor + 1)..config::ELEV_NUM_FLOORS {
-                    for b in 0..config::ELEV_NUM_BUTTONS {
-                        if self.orders[f as usize][b as usize] {
+            state::Direction::Up => {
+                for floor in (current_floor + 1)..config::ELEV_NUM_FLOORS {
+                    for call in 0..config::ELEV_NUM_BUTTONS {
+                        if self.orders[floor as usize][call as usize] {
                             return true;
                         }
                     }
                 }
                 false
             }
-            direction::Direction::Down => {
-                for f in (0..floor).rev() {
-                    for b in 0..config::ELEV_NUM_BUTTONS {
-                        if self.orders[f as usize][b as usize] {
+            state::Direction::Down => {
+                for floor in (0..current_floor).rev() {
+                    for call in 0..config::ELEV_NUM_BUTTONS {
+                        if self.orders[floor as usize][call as usize] {
                             return true;
                         }
                     }
@@ -59,19 +59,19 @@ impl ElevatorOrders {
 
     pub fn order_done(
         &mut self,
-        floor: u8,
-        direction: direction::Direction,
+        current_floor: u8,
+        direction: state::Direction,
         order_completed_tx: &cbc::Sender<poll::CallButton>,
     ) {
-        if self.orders[floor as usize][direction as usize] {
+        if self.orders[current_floor as usize][direction as usize] {
             let _ = order_completed_tx.send(poll::CallButton {
-                floor,
+                floor: current_floor as u8,
                 call: direction as u8,
             });
         }
-        if self.orders[floor as usize][elev::CAB as usize] {
+        if self.orders[current_floor as usize][elev::CAB as usize] {
             let _ = order_completed_tx.send(poll::CallButton {
-                floor,
+                floor: current_floor as u8,
                 call: elev::CAB,
             });
         }

@@ -8,7 +8,6 @@ pub mod cost_function {
 }
 
 pub mod elevator_controller {
-    pub mod direction;
     pub mod doors;
     pub mod elevator_fsm;
     pub mod lights;

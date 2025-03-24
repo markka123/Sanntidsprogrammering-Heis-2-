@@ -1,5 +1,4 @@
 use crate::elevator_controller::orders;
-use crate::elevator_controller::direction;
 use crate::elevator_controller::state;
 
 use std::process::{Command, Stdio};

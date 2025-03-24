@@ -1,6 +1,5 @@
 use crate::config::config;
 use crate::elevio::elev;
-use crate::elevator_controller::direction;
 
 use serde;
 
@@ -22,6 +21,36 @@ impl Behaviour {
     
 } 
 
+#[repr(u8)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
+pub enum Direction {
+    Up = elev::HALL_UP,
+    Down = elev::HALL_DOWN,
+}
+
+impl Direction {
+    pub fn opposite(&self) -> Self {
+        match self {
+            Direction::Up => Direction::Down,
+            Direction::Down => Direction::Up,
+        }
+    }
+
+    pub fn to_motor_direction(&self) -> u8 {
+        match self {
+            Direction::Up => elev::DIRN_UP,
+            Direction::Down => elev::DIRN_DOWN,
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Direction::Up => "up".to_string(),
+            Direction::Down => "down".to_string(),
+        }
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy)]
 pub struct State {
     pub obstructed: bool,
@@ -30,7 +59,7 @@ pub struct State {
     pub emergency_stop: bool,
     pub behaviour: Behaviour,
     pub floor: u8,
-    pub direction: direction::Direction,
+    pub direction: Direction,
 }
 impl State {
     pub fn init() -> Self {
@@ -40,7 +69,7 @@ impl State {
         let emergency_stop = false;
         let behaviour = Behaviour::Idle;
         let floor = 0;
-        let direction = direction::Direction::Down;
+        let direction = Direction::Down;
         Self {
             obstructed,
             motorstop,
