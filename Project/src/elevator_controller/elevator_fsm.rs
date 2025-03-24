@@ -115,7 +115,7 @@ pub fn elevator_fsm(
                         }
                     },
                     state::Behaviour::DoorOpen => {
-                        if elevator_orders.order_at_floor_in_direction(state.floor, state.direction)  {
+                        if elevator_orders.order_at_floor_in_direction(state.floor, state.direction) && state.is_availible() {
                             door_open_tx.send(true).unwrap();
                             elevator_orders.order_done(state.floor, state.direction, &order_completed_tx);
                         }
@@ -182,13 +182,15 @@ pub fn elevator_fsm(
                                 state.behaviour = state::Behaviour::Idle;
                                 elevator.motor_direction(elev::DIRN_STOP);
                             }
-                        }
+                            
+                        } 
+                    new_state_tx.send(state.clone()).unwrap();
                     },
                     _ => {
                         println!("Floor indicator received while in unexpected state")
                     }
                 }
-                new_state_tx.send(state.clone()).unwrap();
+                
             },
 
             recv(door_close_rx) -> _ => {

@@ -81,7 +81,7 @@ impl State {
         }
     }
     pub fn is_availible(&self) -> bool {
-        !(self.motorstop || self.emergency_stop || self.obstructed || self.offline)
+        !(self.motorstop || self.emergency_stop || (self.obstructed && self.behaviour == Behaviour::DoorOpen) || self.offline)
     }
 }
 

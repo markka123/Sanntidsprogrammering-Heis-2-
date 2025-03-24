@@ -149,6 +149,7 @@ pub fn distributor(
                 }
             },
             recv(master_ticker) -> _ => {
+                //println!("state id 0: {:#?}", states[0].behaviour);
                 if states.iter().any(|state| state.is_availible()) {
                     let assigned_orders_string = cost_function::assign_orders(&states, &distributor_orders.cab_orders, &distributor_orders.hall_orders);
                     master_transmit_tx.send(assigned_orders_string).unwrap();

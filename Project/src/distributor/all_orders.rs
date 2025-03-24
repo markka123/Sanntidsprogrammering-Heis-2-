@@ -20,8 +20,7 @@ pub struct AllOrders {
 impl AllOrders {
     pub fn init() -> Self {
         let hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
-        let cab_orders =
-            [[false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
+        let cab_orders = [[false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
         let unconfirmed_orders = Vec::new();
         let assigned_orders_map = HashMap::new();
         let elevator_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];

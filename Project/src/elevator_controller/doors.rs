@@ -20,7 +20,6 @@ pub fn door(
         cbc::select! {
             recv(door_open_rx) -> _ => {
                 elevator.door_light(true);
-               
                 if is_obstructed {
                     door_timer = cbc::never();
                 }
@@ -30,13 +29,12 @@ pub fn door(
                 is_door_open = true;
             },
             recv(obstruction_rx) -> obstruction_message => {
-                let obstruction_status = obstruction_message.unwrap();
-                obstructed_tx.send(obstruction_status).unwrap();
+                is_obstructed = obstruction_message.unwrap();
+                obstructed_tx.send(is_obstructed).unwrap();
 
-                is_obstructed = obstruction_status;
-
-                if is_obstructed {
+                if is_obstructed && is_door_open {
                     door_timer = cbc::never();
+                    
                 } else if is_door_open {
                     door_timer = cbc::after(config::DOOR_TIMER_DURATION);
                 }
