@@ -1,9 +1,10 @@
-use crate::elevio::elev as e;
 use crate::config::config;
+use crate::elevio::elev;
 use crossbeam_channel as cbc;
 
+
 pub fn door(
-    elevator: e::Elevator,
+    elevator: elev::Elevator,
     door_open_rx: cbc::Receiver<bool>,
     door_close_tx: cbc::Sender<bool>,
     obstruction_rx: cbc::Receiver<bool>,
