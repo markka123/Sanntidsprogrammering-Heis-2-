@@ -6,7 +6,7 @@ use crate::elevator::state;
 use crate::elevio::elev;
 use crate::elevio::poll;
 
-use std::thread::*;
+use std::thread::spawn;
 use crossbeam_channel as cbc;
 
 pub fn elevator_fsm(
@@ -17,15 +17,9 @@ pub fn elevator_fsm(
     new_state_tx: cbc::Sender<state::State>,
 ) {
     let mut state = state::State::init();
-
     let mut elevator_orders = orders::ElevatorOrders::init();
 
     let mut motor_timer = cbc::never();
-
-    let (door_open_tx, door_open_rx) = cbc::unbounded::<bool>();
-    let (door_close_tx, door_close_rx) = cbc::unbounded::<bool>();
-    let (motorstop_tx, motorstop_rx) = cbc::unbounded::<bool>();
-    let (obstructed_tx, obstructed_rx) = cbc::unbounded::<bool>();
 
     let (call_button_tx, call_button_rx) = cbc::unbounded::<poll::CallButton>();
     {
@@ -51,6 +45,10 @@ pub fn elevator_fsm(
         spawn(move || poll::obstruction(elevator, obstruction_tx, config::POLL_PERIOD));
     }
 
+
+    let (door_open_tx, door_open_rx) = cbc::unbounded::<bool>();
+    let (door_close_tx, door_close_rx) = cbc::unbounded::<bool>();
+    let (obstructed_tx, obstructed_rx) = cbc::unbounded::<bool>();
     {
         let elevator = elevator.clone();
         spawn(move || {
@@ -63,6 +61,8 @@ pub fn elevator_fsm(
             )
         });
     }
+
+
 
     state.behaviour = state::Behaviour::Moving;
     elevator.motor_direction(state.direction.to_motor_direction());
@@ -121,21 +121,24 @@ pub fn elevator_fsm(
                         }
                     },
                     state::Behaviour::Moving => {
+                        continue;
                     }
                 }
             },
-            recv(call_button_rx) -> call_button => {
-                let call_button = call_button.unwrap(); 
+            recv(call_button_rx) -> call_button_message => {
+                let call_button = call_button_message.unwrap(); 
                 order_new_tx.send(call_button).unwrap();
             },
             recv(floor_sensor_rx) -> floor_message => {
                 let floor = floor_message.unwrap();
-                motor_timer = cbc::never();
-                if state.motorstop {
-                    motorstop_tx.send(false).unwrap();
-                }
+                
                 state.floor = floor;
                 elevator.floor_indicator(state.floor);
+                motor_timer = cbc::never();
+                if state.motorstop {
+                    state.motorstop = false;
+                    new_state_tx.send(state.clone()).unwrap();
+                }
 
                 if state.emergency_stop {
                     continue;
@@ -225,9 +228,7 @@ pub fn elevator_fsm(
 
                     },
                     state::Behaviour::Idle => {
-                        /* if state.emergency_stop {
-                            door_open_tx.send(true).unwrap(); // Sikker på dette?
-                        } */
+                        continue;
                     }
                     _ => {
                         println!("Closing doors in unexpected state");
@@ -237,13 +238,11 @@ pub fn elevator_fsm(
             },
 
             recv(motor_timer) -> _ => {
-                motorstop_tx.send(true).unwrap();
-            },
+                if !state.motorstop {
+                    state.motorstop = true;
+                    new_state_tx.send(state.clone()).unwrap();
+                }
 
-            recv(motorstop_rx) -> motorstop_message => {
-                state.motorstop = motorstop_message.unwrap();
-                new_state_tx.send(state.clone()).unwrap();
-                println!("{}", if state.motorstop { "Lost motor power!" } else { "Regained motor power!" } );
             },
 
             recv(obstructed_rx) -> obstructed_message => {
@@ -252,7 +251,6 @@ pub fn elevator_fsm(
                 println!("{}", if state.obstructed { "Doors are obstructed." } else { "Doors are no longer obstructed." } );
             },
 
-            // Må bestemme oss for stop-knapp funksjonalitet
             recv(stop_button_rx) -> stop_button_message => {
                 let is_emergency_stop = stop_button_message.unwrap();
 

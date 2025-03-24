@@ -5,6 +5,7 @@ use crate::elevator::state;
 
 use crossbeam_channel as cbc;
 
+
 pub type Orders = [[bool; 3]; config::ELEV_NUM_FLOORS as usize];
 pub type HallOrders = [[bool; 2]; config::ELEV_NUM_FLOORS as usize];
 pub type CabOrders = [[bool; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
@@ -15,7 +16,6 @@ pub struct ElevatorOrders {
     pub hall_orders: HallOrders,
     pub orders: Orders,
 }
-
 impl ElevatorOrders {
     pub fn init() -> Self {
         let hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
@@ -27,8 +27,7 @@ impl ElevatorOrders {
     }
 
     pub fn order_at_floor_in_direction(&mut self, floor: u8, direction: state::Direction) -> bool {
-        self.orders[floor as usize][direction as usize]
-            || self.orders[floor as usize][elev::CAB as usize]
+        self.orders[floor as usize][direction as usize] || self.orders[floor as usize][elev::CAB as usize]
     }
 
     pub fn order_in_direction(&mut self, current_floor: u8, direction: state::Direction) -> bool {
@@ -53,7 +52,6 @@ impl ElevatorOrders {
                 }
                 false
             }
-            _ => false,
         }
     }
 

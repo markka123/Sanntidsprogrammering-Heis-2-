@@ -3,13 +3,13 @@ use crate::elevio::elev;
 
 use serde;
 
+
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Behaviour {
     Idle,
     Moving,
     DoorOpen,
 }
-
 impl Behaviour {
     pub fn to_string(&self) -> String {
         match self {
@@ -21,13 +21,13 @@ impl Behaviour {
     
 } 
 
+
 #[repr(u8)]
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Direction {
     Up = elev::HALL_UP,
     Down = elev::HALL_DOWN,
 }
-
 impl Direction {
     pub fn opposite(&self) -> Self {
         match self {
@@ -80,6 +80,7 @@ impl State {
             direction,
         }
     }
+    
     pub fn is_availible(&self) -> bool {
         !(self.motorstop || self.emergency_stop || (self.obstructed && self.behaviour == Behaviour::DoorOpen) || self.offline)
     }
