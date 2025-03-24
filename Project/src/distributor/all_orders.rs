@@ -1,7 +1,7 @@
 use crate::config::config;
 use crate::elevio::elev;
 use crate::elevio::poll;
-use crate::elevator_controller::orders;
+use crate::elevator::orders;
 
 use std::collections::HashMap;
 

@@ -1,8 +1,8 @@
 use crate::config::config;
-use crate::elevator_controller::doors;
-use crate::elevator_controller::orders;
-use crate::elevator_controller::lights;
-use crate::elevator_controller::state;
+use crate::elevator::doors;
+use crate::elevator::orders;
+use crate::elevator::lights;
+use crate::elevator::state;
 use crate::elevio::elev;
 use crate::elevio::poll;
 

@@ -4,19 +4,18 @@ use crate::distributor::receiver;
 use crate::distributor::transmitter;
 use crate::distributor::all_orders;
 use crate::distributor::udp_message;
-use crate::elevator_controller::orders;
-use crate::elevator_controller::state;
+use crate::elevator::orders;
+use crate::elevator::state;
 use crate::elevio::elev;
 use crate::elevio::poll;
 use crate::network::udp;
 
 use crossbeam_channel as cbc;
-use std::sync::Arc;
-use std::thread::*;
-use std::time::*;
+use std::sync;
+use std::thread::spawn;
+use std::time;
 
 pub fn distributor(
-    elevator: &elev::Elevator,
     elevator_id: u8,
     elevator_orders_tx: cbc::Sender<(orders::Orders, orders::HallOrders)>,
     order_completed_rx: cbc::Receiver<poll::CallButton>,
@@ -27,15 +26,15 @@ pub fn distributor(
     let mut distributor_orders = all_orders::AllOrders::init();
     let mut states: state::States = std::array::from_fn(|_| state::State::init());
 
-    let mut last_received_heartbeat = [Instant::now(); config::ELEV_NUM_ELEVATORS as usize];
+    let mut last_received_heartbeat = [time::Instant::now(); config::ELEV_NUM_ELEVATORS as usize];
 
     let unconfirmed_orders_ticker = cbc::tick(config::UNCONFIRMED_ORDERS_TRANSMIT_PERIOD);
     let mut master_ticker = cbc::never();
     let check_heartbeat_ticker = cbc::tick(config::NETWORK_TIMER_DURATION);
 
     let socket = udp::create_udp_socket().expect("Failed to create UDP socket");
-    let socket_receiver = Arc::clone(&socket);
-    let socket_transmitter = Arc::clone(&socket);
+    let socket_receiver = sync::Arc::clone(&socket);
+    let socket_transmitter = sync::Arc::clone(&socket);
 
     let (message_tx, message_rx) = cbc::unbounded::<udp_message::UdpMessage>();
     let (master_transmit_tx, master_transmit_rx) = cbc::unbounded::<String>();
@@ -117,7 +116,7 @@ pub fn distributor(
                         }
 
                         states[id as usize] = state;
-                        last_received_heartbeat[id as usize] = Instant::now();
+                        last_received_heartbeat[id as usize] = time::Instant::now();
                     },
                     Ok(udp_message::UdpMessage::AllAssignedOrders((_, all_assigned_orders_string))) => {
                         let previous_hall_orders = distributor_orders.get_assigned_hall_orders();
@@ -156,7 +155,7 @@ pub fn distributor(
                 }
             },
             recv(check_heartbeat_ticker) -> _ => {
-                let now = Instant::now();
+                let now = time::Instant::now();
                 if (now.duration_since(last_received_heartbeat[elevator_id as usize]) > config::NETWORK_TIMER_DURATION) && !states[elevator_id as usize].offline {
                     states[elevator_id as usize].offline = true;
                     distributor_orders.init_offline_operation(elevator_id);

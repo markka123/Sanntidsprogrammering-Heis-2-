@@ -1,7 +1,7 @@
 use crate::config::config;
 use crate::elevio::elev;
 use crate::elevio::poll;
-use crate::elevator_controller::state;
+use crate::elevator::state;
 
 use crossbeam_channel as cbc;
 
