@@ -50,8 +50,6 @@ fn main() -> std::io::Result<()> {
     }
 
     loop {
-
+        std::thread::park();
     }
-
-    Ok(())
 }
