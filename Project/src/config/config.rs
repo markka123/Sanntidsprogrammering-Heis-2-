@@ -16,17 +16,16 @@ pub const NETWORK_TIMER_DURATION: time::Duration = time::Duration::from_secs(1);
 pub const POLL_PERIOD: time::Duration = time::Duration::from_millis(25);
 pub const UDP_POLL_PERIOD: time::Duration = time::Duration::from_millis(1);
 
-pub const UNCONFIRMED_ORDERS_TRANSMIT_PERIOD: time::Duration = time::Duration::from_millis(30);  // fix
-pub const STATE_TRANSMIT_PERIOD: time::Duration = time::Duration::from_millis(10);  // fix
-pub const MASTER_TRANSMIT_PERIOD: time::Duration = time::Duration::from_millis(20);  // fix
+pub const UNCONFIRMED_ORDERS_TRANSMIT_PERIOD: time::Duration = time::Duration::from_millis(30);
+pub const STATE_TRANSMIT_PERIOD: time::Duration = time::Duration::from_millis(10);
+pub const MASTER_TRANSMIT_PERIOD: time::Duration = time::Duration::from_millis(20);
 
-pub const UDP_PORT: u16 = 15058; //changed from 15000 because of traffic
+pub const UDP_PORT: u16 = 15058;
 pub const BROADCAST_IP: &str = "255.255.255.255";
 
 
 
 pub fn fetch_command_line_arguments() -> (u16, u8) {
-
     let default_port = 15657;
     let default_elevator_id = 0;
 
@@ -44,5 +43,6 @@ pub fn fetch_command_line_arguments() -> (u16, u8) {
             }
         }
     }
+    
     (port, elevator_id)
 }

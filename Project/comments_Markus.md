@@ -42,8 +42,8 @@ distributor:
 - Endra message_type variabelen til order_type - kan være et annet navn er bedre, men synes det passer bedre enn message_type
 - Jeg byttet rekkefølge på hvor vi setter state.offline til false og state=state -> tror sånn det var gjorde at vi risikerte å overskrive det at vi satte den til online igjen, men dette har ikke skjedd på noen tester -> test dette!
 
-
-
+transmitter:
+- Usikker på om jeg er fornøyd med at vi kaller alle utgående meldinger message uavhengig av type. 
 
 
 

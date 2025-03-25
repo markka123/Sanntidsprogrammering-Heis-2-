@@ -47,7 +47,7 @@ pub fn distributor(
     let (order_message_tx, order_message_rx) = cbc::unbounded::<(u8, poll::CallButton)>();
     {
         spawn(move || {
-            transmitter::transmitter(elevator_id, new_state_rx, master_transmit_rx, order_message_rx, socket_transmitter)
+            transmitter::transmitter(new_state_rx, master_transmit_rx, order_message_rx, socket_transmitter, elevator_id)
         });
     }
 
@@ -173,8 +173,8 @@ pub fn distributor(
             },
             recv(master_ticker) -> _ => {
                 if states.iter().any(|state| state.is_availible()) {
-                    let assigned_orders_string = cost_function::assign_orders(&states, &distributor_orders.cab_orders, &distributor_orders.hall_orders);
-                    master_transmit_tx.send(assigned_orders_string).unwrap();
+                    let all_assigned_orders_string = cost_function::assign_orders(&states, &distributor_orders.cab_orders, &distributor_orders.hall_orders);
+                    master_transmit_tx.send(all_assigned_orders_string).unwrap();
                 }
             },
         }

@@ -3,9 +3,9 @@ use crate::config::config;
 use crate::network::udp;
 
 use crossbeam_channel as cbc;
+use serde_json;
 use std::net;
 use std::sync;
-use serde_json;
 
 pub fn receiver(
     udp_message_tx: cbc::Sender<udp_message::UdpMessage>,
@@ -31,12 +31,13 @@ pub fn receiver(
                         Ok(udp_message::UdpMessage::State((elevator_id, state))) => {
                             udp_message_tx.send(udp_message::UdpMessage::State((elevator_id, state))).unwrap();
                         }
-                        Ok(udp_message::UdpMessage::Order(call)) => {
-                            udp_message_tx.send(udp_message::UdpMessage::Order(call)).unwrap();
+                        Ok(udp_message::UdpMessage::Order((elevator_id, call))) => {
+                            udp_message_tx.send(udp_message::UdpMessage::Order((elevator_id, call))).unwrap();
                         }
                         Ok(udp_message::UdpMessage::AllAssignedOrders((incoming_master_id, all_assigned_orders))) => {
                             master_id = incoming_master_id;
                             master_timer = cbc::after(config::MASTER_TIMER_DURATION);
+
                             udp_message_tx.send(udp_message::UdpMessage::AllAssignedOrders((master_id, all_assigned_orders))).unwrap();
    
                         }
