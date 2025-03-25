@@ -77,8 +77,7 @@ impl AllOrders {
                 elev::CAB => {
                     if let Some(assigned_orders) = assigned_orders_map.get(&elevator_id) {
                         let cab_is_assigned = assigned_orders[order.floor as usize][order.call as usize];
-                        return !((cab_is_assigned && *order_type == NEW_ORDER)
-                            || (!cab_is_assigned && *order_type == COMPLETED_ORDER));
+                        return !((cab_is_assigned && *order_type == NEW_ORDER) || (!cab_is_assigned && *order_type == COMPLETED_ORDER));
                     }
                     true
                 }

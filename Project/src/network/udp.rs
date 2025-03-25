@@ -56,7 +56,7 @@ pub fn receive_udp_message<T: serde::de::DeserializeOwned>(socket: &sync::Arc<ne
             }
         }
         Err(e) => {
-            
+            println!("Failed to receive message in network::udp and received this error: {:#?}", e);
         }
     }
     None

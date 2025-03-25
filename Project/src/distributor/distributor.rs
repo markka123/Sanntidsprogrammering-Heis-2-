@@ -103,22 +103,22 @@ pub fn distributor(
                                 distributor_orders.add_order(new_order, id);
                             },
                             all_orders::COMPLETED_ORDER => {
-                   
                                 distributor_orders.remove_order(new_order, id);
                             },
                             _ => {
+                                println!("Received unexpected order type.")
                             }
                         }
                     },
                     Ok(udp_message::UdpMessage::State((id, state))) => {
-
-                        if states[id as usize].offline {
-                            println!("Elevator {} has come online again", id);
-                            states[id as usize].offline = false;
-                        }
-
                         states[id as usize] = state;
                         last_received_heartbeat[id as usize] = time::Instant::now();
+                        
+                        if states[id as usize].offline {
+                            states[id as usize].offline = false;
+                            println!("Elevator {} has come online again", id);
+                        }
+
                     },
                     Ok(udp_message::UdpMessage::AllAssignedOrders((_, all_assigned_orders_string))) => {
                         let previous_hall_orders = distributor_orders.get_assigned_hall_orders();
@@ -126,6 +126,8 @@ pub fn distributor(
                         
                         distributor_orders.assigned_orders_map = serde_json::from_value(all_assigned_orders_string).unwrap();
                         distributor_orders.hall_orders = distributor_orders.get_assigned_hall_orders();
+
+                        distributor_orders.confirm_orders(elevator_id);
 
                         if let Some(new_elevator_orders) = distributor_orders.assigned_orders_map.get(&elevator_id) {
                             distributor_orders.elevator_orders = *new_elevator_orders;
@@ -135,43 +137,46 @@ pub fn distributor(
                         if change_in_orders {
                             elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                         }
-
-                        distributor_orders.confirm_orders(elevator_id);
                     }
                     Err(e) => {
-                        
+                        println!("Received unexpected udp message in distributor::distributor and it caused this error: {:#?}.", e);
                     }
-                }
-            },
-            recv(master_activate_rx) -> _ => {
-                if !states[elevator_id as usize].offline {
-                    println!("Taking over as master.");
-                    master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
-                }
-            },
-            recv(master_ticker) -> _ => {
-                //println!("state id 0: {:#?}", states[0].behaviour);
-                if states.iter().any(|state| state.is_availible()) {
-                    let assigned_orders_string = cost_function::assign_orders(&states, &distributor_orders.cab_orders, &distributor_orders.hall_orders);
-                    master_transmit_tx.send(assigned_orders_string).unwrap();
                 }
             },
             recv(check_heartbeat_ticker) -> _ => {
                 let now = time::Instant::now();
-                if (now.duration_since(last_received_heartbeat[elevator_id as usize]) > config::NETWORK_TIMER_DURATION) && !states[elevator_id as usize].offline {
+                
+                let this_elevator_lost_connection = (now.duration_since(last_received_heartbeat[elevator_id as usize]) > config::NETWORK_TIMER_DURATION) && !states[elevator_id as usize].offline;
+                if this_elevator_lost_connection {
                     states[elevator_id as usize].offline = true;
-                    distributor_orders.init_offline_operation(elevator_id);
                     master_ticker = cbc::never();
+
+                    distributor_orders.init_offline_operation(elevator_id);
                     elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                    
                     println!("Lost network connection - starting offline operation");
                 }
+
                 for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
-                    if (now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION) && (!states[id].offline && !states[elevator_id as usize].offline) {
+                    let elevator_lost_connection = (now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION) && (!states[id].offline && !states[elevator_id as usize].offline);
+                    if elevator_lost_connection {
                         println!("Elevator {} has gone offline", id);
                         states[id].offline = true;
                     }
                 }
             }
+            recv(master_activate_rx) -> _ => {
+                if !states[elevator_id as usize].offline {
+                    master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
+                    println!("Taking over as master.");
+                }
+            },
+            recv(master_ticker) -> _ => {
+                if states.iter().any(|state| state.is_availible()) {
+                    let assigned_orders_string = cost_function::assign_orders(&states, &distributor_orders.cab_orders, &distributor_orders.hall_orders);
+                    master_transmit_tx.send(assigned_orders_string).unwrap();
+                }
+            },
         }
     }
 }

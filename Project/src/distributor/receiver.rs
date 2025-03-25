@@ -41,7 +41,7 @@ pub fn receiver(
    
                         }
                         Err(e) => {
-                            println!("Error: {}", e);
+                            println!("Failed to receive message in distributor::receiver and received this error: {:#?}", e);
                         }
                     }
                 }
