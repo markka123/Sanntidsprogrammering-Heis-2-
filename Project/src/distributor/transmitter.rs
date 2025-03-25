@@ -1,7 +1,6 @@
 use crate::config::config;
 use crate::elevator::state;
 use crate::elevio::poll;
-use crate::network::udp;
 use crate::distributor::udp_message;
 
 use crossbeam_channel as cbc;
@@ -13,7 +12,7 @@ pub fn transmitter(
     elevator_id: u8,
     new_state_rx: cbc::Receiver<state::State>,
     master_transmit_rx: cbc::Receiver<String>,
-    call_message_rx: cbc::Receiver<(u8, poll::CallButton)>,
+    order_message_rx: cbc::Receiver<(u8, poll::CallButton)>,
     socket: sync::Arc<net::UdpSocket>,
 ) {
     let mut state: state::State = state::State::init();
@@ -26,7 +25,7 @@ pub fn transmitter(
                 let new_state = state_message.unwrap();
                 state = new_state;
             },
-            recv(call_message_rx) -> order_message => {
+            recv(order_message_rx) -> order_message => {
                 let (message_type, call) = order_message.unwrap();
                 let message = udp_message::UdpMessage::Order((elevator_id, [message_type, call.floor, call.call]));
                 udp_message::broadcast_udp_message(&socket, &message);

@@ -33,5 +33,10 @@ orders:
 all_orders:
 - I add og remove order trenger vi strengt tatt ikke else if delen (order er alltid en CallButton så vil ikke være noen andre caser) -> kan være det er mest forklarende å beholde likevel
 
+distributor:
+- Vi kaller alle konstantene til tickers for period untatt for check heartbeat ticker, den heter duration -> vurdere å endre enten navnet på variabelen eller konstanten?
+- Vi kunne vurdert å legge til en funksjon som heter add _offline_order som både kunne lagt til i distributor_orders.elevator_orders og CAB + Hall som add_order funksjonen vår nå gjør. Det blir ikke noen ferre linjer kode, men lurer på om det er mulig å bli forvirret/tenke at det er misvisende at vi først legger til i elevator orders før vi kjører funksjonen add_order (og samme med offline_remove_order)
+- Endra message_type variabelen til order_type - kan være et annet navn er bedre, men synes det passer bedre enn message_type
+
 
 
