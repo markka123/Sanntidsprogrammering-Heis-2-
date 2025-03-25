@@ -3,17 +3,19 @@ use crate::elevio::elev;
 use crate::elevio::poll;
 use crate::elevator::orders;
 
-use std::collections::HashMap;
+use std::collections;
+
 
 pub const NEW_ORDER: u8 = 0;
 pub const COMPLETED_ORDER: u8 = 1;
+
 
 #[derive(Clone, Debug)]
 pub struct AllOrders {
     pub hall_orders: orders::HallOrders,
     pub cab_orders: orders::CabOrders,
     pub unconfirmed_orders: Vec<(u8, poll::CallButton)>,
-    pub assigned_orders_map: HashMap<u8, orders::Orders>,
+    pub assigned_orders_map: collections::HashMap<u8, orders::Orders>,
     pub elevator_orders: orders::Orders,
 }
 
@@ -22,7 +24,7 @@ impl AllOrders {
         let hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
         let cab_orders = [[false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
         let unconfirmed_orders = Vec::new();
-        let assigned_orders_map = HashMap::new();
+        let assigned_orders_map = collections::HashMap::new();
         let elevator_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
         Self {
             hall_orders,
@@ -30,8 +32,9 @@ impl AllOrders {
             unconfirmed_orders,
             assigned_orders_map,
             elevator_orders,
-        }
+        }   
     }
+
     pub fn add_order(&mut self, order: poll::CallButton, elevator_id: u8) {
         if order.call == elev::CAB {
             self.cab_orders[elevator_id as usize][order.floor as usize] = true;
@@ -45,8 +48,6 @@ impl AllOrders {
             self.cab_orders[elevator_id as usize][order.floor as usize] = false;
         } else if order.call == elev::HALL_DOWN || order.call == elev::HALL_UP {
             self.hall_orders[order.floor as usize][order.call as usize] = false;
-        } else {
-            //Handle error
         }
     }
 

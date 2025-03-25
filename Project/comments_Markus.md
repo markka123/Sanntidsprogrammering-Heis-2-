@@ -30,3 +30,8 @@ lights:
 orders:
 - Legge til let _ der vi sender på order_done_tx gjør at vi ignorerer erroren -> burde vi ikke gjøre dette alle andre ganger vi sender på en tx eller ikke i det hele tatt her? Evt generelt om vi skulle håndtert den erroren? (Klar over at å fjerne let _ vil introdusere en warning fra compilern)
 
+all_orders:
+- I add og remove order trenger vi strengt tatt ikke else if delen (order er alltid en CallButton så vil ikke være noen andre caser) -> kan være det er mest forklarende å beholde likevel
+
+
+
