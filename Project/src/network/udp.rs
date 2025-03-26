@@ -18,7 +18,6 @@ pub fn create_socket() -> io::Result<sync::Arc<net::UdpSocket>> {
 
     let socket = sync::Arc::new(net::UdpSocket::from(socket));
     socket.set_broadcast(true)?;
-    socket.set_nonblocking(true)?;
 
     Ok(socket)
 }

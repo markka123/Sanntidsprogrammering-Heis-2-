@@ -127,7 +127,10 @@ pub fn distributor(
 
                         if let Some(new_elevator_orders) = distributor_orders.assigned_orders_map.get(&elevator_id) {
                             distributor_orders.elevator_orders = *new_elevator_orders;
+                        } else {
+                            distributor_orders.update_elevator_orders_when_unavalible(elevator_id);
                         }
+
 
                         let change_in_orders = distributor_orders.hall_orders != previous_hall_orders || distributor_orders.elevator_orders != previous_elevator_orders;
                         if change_in_orders {
@@ -157,7 +160,7 @@ pub fn distributor(
                     println!("Lost network connection - starting offline operation.");
                 }
 
-                else {
+                else { 
                     for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
                         let elevator_lost_connection = (now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION) && (!states[id].offline && !states[elevator_id as usize].offline);
                         if elevator_lost_connection {

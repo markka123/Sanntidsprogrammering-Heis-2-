@@ -111,23 +111,31 @@ impl AllOrders {
         all_hall_orders
     }
 
-    pub fn init_offline_operation(&mut self, id: u8) {
+    pub fn init_offline_operation(&mut self, elevator_id: u8) {
 
-        for (order_status, order) in self.unconfirmed_orders.iter() {
-            if *order_status == NEW_ORDER {
-                self.elevator_orders[order.floor as usize][order.call as usize] = true;
-            }
-        }
         let mut floor = 0;
-        for order in self.cab_orders[id as usize].iter() {
+        for order in self.cab_orders[elevator_id as usize].iter() {
             self.elevator_orders[floor as usize][elev::CAB as usize] = *order;
             floor += 1;
         }
         for floor in 0..config::ELEV_NUM_FLOORS {
             for call in 0..(config::ELEV_NUM_BUTTONS-1) {
-                self.hall_orders[floor as usize][call as usize] = self.elevator_orders[floor as usize][call as usize];
+                self.elevator_orders[floor as usize][call as usize] = self.hall_orders[floor as usize][call as usize];
             }
         }
+        for (order_status, order) in self.unconfirmed_orders.iter() {
+            if *order_status == NEW_ORDER {
+                self.elevator_orders[order.floor as usize][order.call as usize] = true;
+            }
+        }
+    }
 
+    pub fn update_elevator_orders_when_unavalible(&mut self, elevator_id: u8) {
+        self.elevator_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
+        let mut floor = 0;
+        for order in self.cab_orders[elevator_id as usize].iter() {
+            self.elevator_orders[floor as usize][elev::CAB as usize] = *order;
+            floor += 1;
+        }
     }
 }

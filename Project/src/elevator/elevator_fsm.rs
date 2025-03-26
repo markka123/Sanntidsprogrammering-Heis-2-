@@ -70,14 +70,13 @@ pub fn elevator_fsm(
             recv(elevator_orders_rx) -> elevator_orders_message => {
                 (elevator_orders.orders, elevator_orders.hall_orders) = elevator_orders_message.unwrap();
             
-                elevator_orders.set_lights(elevator.clone()); 
+                elevator_orders.set_lights(elevator.clone());
                 
                 match state.behaviour {
                     state::Behaviour::Idle => {
                         if elevator_orders.cab_at_floor(state.floor) || elevator_orders.hall_at_floor_in_direction(state.floor, state.direction) {
                             state.behaviour = state::Behaviour::DoorOpen;
                             new_state_tx.send(state.clone()).unwrap();
-
                             elevator_orders.order_done(state.floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap();
                         }
@@ -85,14 +84,12 @@ pub fn elevator_fsm(
                             state.behaviour = state::Behaviour::DoorOpen;
                             state.direction = state.direction.opposite();
                             new_state_tx.send(state.clone()).unwrap();
-
                             elevator_orders.order_done(state.floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap();
                         }
                         else if elevator_orders.order_in_direction(state.floor, state.direction) {
                             state.behaviour = state::Behaviour::Moving;
                             new_state_tx.send(state.clone()).unwrap();
-
                             elevator.motor_direction(state.direction.to_motor_direction());
                             motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                         }
@@ -100,7 +97,6 @@ pub fn elevator_fsm(
                             state.behaviour = state::Behaviour::Moving;
                             state.direction = state.direction.opposite();
                             new_state_tx.send(state.clone()).unwrap();
-
                             elevator.motor_direction(state.direction.to_motor_direction());
                             motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                         }
@@ -149,8 +145,9 @@ pub fn elevator_fsm(
                         else if elevator_orders.cab_at_floor(state.floor) && !elevator_orders.hall_at_floor_in_direction(state.floor, state.direction.opposite()) {
                             state.behaviour = state::Behaviour::DoorOpen;
                             elevator.motor_direction(elev::DIRN_STOP);
-                            open_doors_tx.send(true).unwrap();
                             elevator_orders.order_done(floor, state.direction, &completed_order_tx);
+                            open_doors_tx.send(true).unwrap();
+                            
                         }
                         else if elevator_orders.order_in_direction(state.floor, state.direction) {
                             elevator.motor_direction(state.direction.to_motor_direction());
@@ -159,9 +156,11 @@ pub fn elevator_fsm(
                         else if elevator_orders.cab_at_floor(state.floor) || elevator_orders.hall_at_floor_in_direction(state.floor, state.direction.opposite()) {
                             state.behaviour = state::Behaviour::DoorOpen;
                             state.direction = state.direction.opposite();
+                            elevator_orders.order_done(floor, state.direction, &completed_order_tx);
+                            
                             elevator.motor_direction(elev::DIRN_STOP);
                             open_doors_tx.send(true).unwrap(); 
-                            elevator_orders.order_done(floor, state.direction, &completed_order_tx);
+                            
                         }
                         else if elevator_orders.order_in_direction(state.floor, state.direction.opposite()) {
                             state.direction = state.direction.opposite();
@@ -221,13 +220,12 @@ pub fn elevator_fsm(
             },
             recv(stop_button_rx) -> stop_button_message => {
                 let stop_button_pressed = stop_button_message.unwrap();
-
                 if stop_button_pressed && !state.emergency_stop {
                     state.emergency_stop = true;
                     elevator.motor_direction(elev::DIRN_STOP);
                     motor_timer = cbc::never();
 
-                    if state.behaviour == state::Behaviour::Idle {
+                    if state.behaviour == state::Behaviour::Idle || state.behaviour == state::Behaviour::DoorOpen  {
                         obstruct_doors_tx.send(true).unwrap();
                         open_doors_tx.send(true).unwrap();
                     }
