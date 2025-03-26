@@ -24,7 +24,7 @@ pub fn receiver(
                     master_activate_tx.send(true).unwrap();
                 }
                 master_timer = cbc::after(config::MASTER_TIMER_DURATION);
-            },
+            },  
             default(config::UDP_POLL_PERIOD) => {
                 if let Some((received_message, _)) = udp::receive_message::<String>(&socket) {
                     match serde_json::from_str::<udp_message::UdpMessage>(&received_message) {
