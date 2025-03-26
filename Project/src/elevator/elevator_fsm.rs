@@ -213,9 +213,10 @@ pub fn elevator_fsm(
                         }
                         else {
                             state.behaviour = state::Behaviour::Idle;
+                            new_state_tx.send(state.clone()).unwrap();
+
                             motor_timer = cbc::never();
                         }
-                        new_state_tx.send(state.clone()).unwrap();
                     },
                     _ => {
                         println!("Closing doors in unexpected state.");
@@ -236,6 +237,8 @@ pub fn elevator_fsm(
                 let stop_button_pressed = stop_button_message.unwrap();
                 if stop_button_pressed && !state.emergency_stop {
                     state.emergency_stop = true;
+                    new_state_tx.send(state.clone()).unwrap();
+
                     elevator.motor_direction(elev::DIRN_STOP);
                     motor_timer = cbc::never();
 
@@ -244,19 +247,22 @@ pub fn elevator_fsm(
                         open_doors_tx.send(true).unwrap();
                     }
 
-                    new_state_tx.send(state.clone()).unwrap();
                     println!("Emergency stop activated");
                 }
                 else if stop_button_pressed && state.emergency_stop {
                     state.emergency_stop = false;
+                    new_state_tx.send(state.clone()).unwrap();
+
+                    obstruct_doors_tx.send(false).unwrap();
+                    
                     if state.behaviour == state::Behaviour::Moving {
                         elevator.motor_direction(state.direction.to_motor_direction());
                         motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                     }
-                    obstruct_doors_tx.send(false).unwrap();
-                    new_state_tx.send(state.clone()).unwrap();
+
                     println!("Emergency stop deactivated");
                 }
+
                 elevator.stop_button_light(state.emergency_stop);
             }
             recv(motor_timer) -> _ => {
@@ -264,7 +270,7 @@ pub fn elevator_fsm(
                     state.motorstop = true;
                     new_state_tx.send(state.clone()).unwrap();
 
-                    println!("Lost motor power.")
+                    println!("Lost motor power.");
                 }
             },
         }
