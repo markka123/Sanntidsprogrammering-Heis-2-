@@ -28,17 +28,21 @@ pub fn distributor(
 
     let unconfirmed_orders_ticker = cbc::tick(config::UNCONFIRMED_ORDERS_TRANSMIT_PERIOD);
     let check_heartbeat_ticker = cbc::tick(config::NETWORK_TIMER_DURATION);
+
+    
+    let mut master_id = config::ELEV_NUM_ELEVATORS-1;
     let mut master_ticker = cbc::never();
+    let mut master_timer = cbc::after(config::MASTER_TIMER_DURATION);
+
 
     let socket = udp::create_socket().expect("Failed to create UDP socket");
     let socket_receiver = sync::Arc::clone(&socket);
     let socket_transmitter = sync::Arc::clone(&socket);
 
     let (udp_message_tx, udp_message_rx) = cbc::unbounded::<udp_message::UdpMessage>();
-    let (master_activate_tx, master_activate_rx) = cbc::unbounded::<bool>();
     {
         thread::spawn(move || {
-            receiver::receiver(udp_message_tx, master_activate_tx, socket_receiver, elevator_id)
+            receiver::receiver(udp_message_tx, socket_receiver)
         });
     }
 
@@ -54,6 +58,24 @@ pub fn distributor(
 
     loop {
         cbc::select! {
+            recv(master_timer) -> _ => {
+                master_id = (master_id + 1) % config::ELEV_NUM_ELEVATORS;
+
+                if elevator_id == master_id {
+                    if !states[elevator_id as usize].offline {
+                        master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
+                        println!("Taking over as master.");
+                    }
+                }
+
+                master_timer = cbc::after(config::MASTER_TIMER_DURATION);
+            },
+            recv(master_ticker) -> _ => {
+                if states.iter().any(|state| state.is_availible()) {
+                    let all_assigned_orders_string = cost_function::assign_orders(&states, &distributor_orders.cab_orders, &distributor_orders.hall_orders);
+                    master_transmit_tx.send(all_assigned_orders_string).unwrap();
+                }
+            },
             recv(new_order_rx) -> new_order_message => {
                 let new_order = new_order_message.unwrap();
                 let order_status = all_orders::NEW_ORDER;
@@ -116,7 +138,7 @@ pub fn distributor(
                         states[id as usize] = state;
                         last_received_heartbeat[id as usize] = time::Instant::now();
                     },
-                    Ok(udp_message::UdpMessage::AllAssignedOrders((master_id, all_assigned_orders_string))) => {
+                    Ok(udp_message::UdpMessage::AllAssignedOrders((incoming_master_id, all_assigned_orders_string))) => {
                         let previous_hall_orders = distributor_orders.get_assigned_hall_orders();
                         let previous_elevator_orders = distributor_orders.elevator_orders;
                         
@@ -131,12 +153,13 @@ pub fn distributor(
                             distributor_orders.update_elevator_orders_when_unavalible(elevator_id);
                         }
 
-
                         let change_in_orders = distributor_orders.hall_orders != previous_hall_orders || distributor_orders.elevator_orders != previous_elevator_orders;
                         if change_in_orders {
                             elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                         }
-                        
+
+                        master_id = incoming_master_id;
+                        master_timer = cbc::after(config::MASTER_TIMER_DURATION);
                         if master_id != elevator_id {
                             master_ticker = cbc::never();
                         }
@@ -170,18 +193,6 @@ pub fn distributor(
                     }
                 }
             }
-            recv(master_activate_rx) -> _ => {
-                if !states[elevator_id as usize].offline {
-                    master_ticker = cbc::tick(config::MASTER_TRANSMIT_PERIOD);
-                    println!("Taking over as master.");
-                }
-            },
-            recv(master_ticker) -> _ => {
-                if states.iter().any(|state| state.is_availible()) {
-                    let all_assigned_orders_string = cost_function::assign_orders(&states, &distributor_orders.cab_orders, &distributor_orders.hall_orders);
-                    master_transmit_tx.send(all_assigned_orders_string).unwrap();
-                }
-            },
         }
     }
 }

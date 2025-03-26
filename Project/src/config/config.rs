@@ -13,7 +13,6 @@ pub const MASTER_TIMER_DURATION: time::Duration = time::Duration::from_secs(2);
 pub const NETWORK_TIMER_DURATION: time::Duration = time::Duration::from_secs(1);
 
 pub const POLL_PERIOD: time::Duration = time::Duration::from_millis(25);
-pub const UDP_POLL_PERIOD: time::Duration = time::Duration::from_millis(1);
 
 pub const UNCONFIRMED_ORDERS_TRANSMIT_PERIOD: time::Duration = time::Duration::from_millis(30);
 pub const STATE_TRANSMIT_PERIOD: time::Duration = time::Duration::from_millis(10);
