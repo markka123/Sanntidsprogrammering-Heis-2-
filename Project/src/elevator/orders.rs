@@ -26,8 +26,12 @@ impl ElevatorOrders {
         }
     }
 
-    pub fn order_at_floor_in_direction(&mut self, floor: u8, direction: state::Direction) -> bool {
-        self.orders[floor as usize][direction as usize] || self.orders[floor as usize][elev::CAB as usize]
+    pub fn hall_at_floor_in_direction(&mut self, floor: u8, direction: state::Direction) -> bool {
+        self.orders[floor as usize][direction as usize]
+    }
+
+    pub fn cab_at_floor(&mut self, floor: u8) -> bool {
+        self.orders[floor as usize][elev::CAB as usize]
     }
 
     pub fn order_in_direction(&mut self, current_floor: u8, direction: state::Direction) -> bool {
@@ -59,19 +63,31 @@ impl ElevatorOrders {
         &mut self,
         current_floor: u8,
         direction: state::Direction,
-        order_completed_tx: &cbc::Sender<poll::CallButton>,
-    ) {
+        completed_order_tx: &cbc::Sender<poll::CallButton>,
+    ) {        
         if self.orders[current_floor as usize][direction as usize] {
-            let _ = order_completed_tx.send(poll::CallButton {
+            let completed_order = poll::CallButton {
                 floor: current_floor as u8,
                 call: direction as u8,
-            });
+            };
+            completed_order_tx.send(completed_order).unwrap();
         }
         if self.orders[current_floor as usize][elev::CAB as usize] {
-            let _ = order_completed_tx.send(poll::CallButton {
+            let completed_order = poll::CallButton {
                 floor: current_floor as u8,
                 call: elev::CAB,
-            });
+            };
+            completed_order_tx.send(completed_order).unwrap();
+        }
+    }
+
+    pub fn set_lights(&self, elevator : elev::Elevator) {
+        for floor in 0..config::ELEV_NUM_FLOORS {
+            for call in 0..(config::ELEV_NUM_BUTTONS-1) {
+                    elevator.call_button_light(floor, call, self.hall_orders[floor as usize][call as usize]);
+            }
+            elevator.call_button_light(floor, elev::CAB, self.orders[floor as usize][elev::CAB as usize]);
         }
     }
 }
+

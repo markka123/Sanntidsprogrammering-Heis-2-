@@ -25,8 +25,8 @@ pub fn transmitter(
                 elevator_state = new_state;
             },
             recv(order_message_rx) -> order_message => {
-                let (order_type, call) = order_message.unwrap();
-                let message = udp_message::UdpMessage::Order((elevator_id, [order_type, call.floor, call.call]));
+                let (order_status, order) = order_message.unwrap();
+                let message = udp_message::UdpMessage::Order((elevator_id, [order_status, order.floor, order.call]));
                 udp_message::broadcast_udp_message(&socket, &message);
             },
             recv(state_ticker) -> _ => {

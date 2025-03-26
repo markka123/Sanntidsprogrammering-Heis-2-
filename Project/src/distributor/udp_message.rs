@@ -15,6 +15,6 @@ pub enum UdpMessage {
 }
 
 pub fn broadcast_udp_message(socket: &sync::Arc<net::UdpSocket>, message: &UdpMessage) {
-    let serialized_message = serde_json::to_string(message).unwrap();
-    let _ = udp::broadcast_udp_message(&socket, &serialized_message);
+    let message_string = serde_json::to_string(message).unwrap();
+    let _ = udp::broadcast_message(&socket, &message_string);
 }

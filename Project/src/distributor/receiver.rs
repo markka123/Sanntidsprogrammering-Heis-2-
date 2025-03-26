@@ -26,13 +26,13 @@ pub fn receiver(
                 master_timer = cbc::after(config::MASTER_TIMER_DURATION);
             },
             default(config::UDP_POLL_PERIOD) => {
-                if let Some((received_message, _)) = udp::receive_udp_message::<String>(&socket) {
+                if let Some((received_message, _)) = udp::receive_message::<String>(&socket) {
                     match serde_json::from_str::<udp_message::UdpMessage>(&received_message) {
                         Ok(udp_message::UdpMessage::State((elevator_id, state))) => {
                             udp_message_tx.send(udp_message::UdpMessage::State((elevator_id, state))).unwrap();
                         }
-                        Ok(udp_message::UdpMessage::Order((elevator_id, call))) => {
-                            udp_message_tx.send(udp_message::UdpMessage::Order((elevator_id, call))).unwrap();
+                        Ok(udp_message::UdpMessage::Order((elevator_id, order))) => {
+                            udp_message_tx.send(udp_message::UdpMessage::Order((elevator_id, order))).unwrap();
                         }
                         Ok(udp_message::UdpMessage::AllAssignedOrders((incoming_master_id, all_assigned_orders))) => {
                             master_id = incoming_master_id;

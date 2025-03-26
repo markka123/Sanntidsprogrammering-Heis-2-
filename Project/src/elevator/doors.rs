@@ -4,52 +4,52 @@ use crate::elevio::elev;
 use crossbeam_channel as cbc;
 
 
-pub fn door(
+pub fn doors(
     elevator: elev::Elevator,
-    door_open_rx: cbc::Receiver<bool>,
-    door_close_tx: cbc::Sender<bool>,
-    obstruction_rx: cbc::Receiver<bool>,
-    obstructed_tx: cbc::Sender<bool>
+    open_doors_rx: cbc::Receiver<bool>,
+    close_doors_tx: cbc::Sender<bool>,
+    obstruct_doors_rx: cbc::Receiver<bool>
 ) {
 
     elevator.door_light(false);
 
-    let mut is_obstructed = false;
-    let mut is_door_open = false;
+    let mut doors_obstructed = false;
+    let mut doors_open = false;
     let mut door_timer = cbc::never();
 
     loop {
         cbc::select! {
-            recv(door_open_rx) -> _ => {
+            recv(open_doors_rx) -> _ => {
                 elevator.door_light(true);
 
-                if is_obstructed {
+                if doors_obstructed {
                     door_timer = cbc::never();
+                    println!("Doors are obstructed.");
                 }
                 else {
                     door_timer = cbc::after(config::DOOR_TIMER_DURATION);
                 }
 
-                is_door_open = true;
+                doors_open = true;
             },
-            recv(obstruction_rx) -> obstruction_message => {
-                is_obstructed = obstruction_message.unwrap();
+            recv(obstruct_doors_rx) -> obstruction_message => {
+                doors_obstructed = obstruction_message.unwrap();
 
-                if is_obstructed && is_door_open {
+                if doors_obstructed && doors_open {
                     door_timer = cbc::never();
+                    println!("Doors are obstructed.");
                     
-                } else if is_door_open {
+                } else if doors_open {
                     door_timer = cbc::after(config::DOOR_TIMER_DURATION);
+                    println!("Doors are no longer obstructed.");
                 }
-
-                obstructed_tx.send(is_obstructed).unwrap();
             },
 
             recv(door_timer) -> _ => {
-                is_door_open = false;
+                doors_open = false;
                 elevator.door_light(false);
                 
-                door_close_tx.send(true).unwrap();
+                close_doors_tx.send(true).unwrap();
             }
         }
     }

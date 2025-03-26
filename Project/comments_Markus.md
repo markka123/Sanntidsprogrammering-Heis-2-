@@ -7,12 +7,7 @@ Generelt:
 - Writeout crossbeamchannel instad of cbc?
 - Det er noen funksjoner som er noe kompliserte hvor vi kanskje skal vurdere en docustring? (init_offline_operation, confirm_orders)
 
-main:
-- Synes ikke det er helt ryddig med den loopen og OK(()) på slutten -> burde se litt på det
-
 elevator_fsm:
-- motorstop_rx og tx er en channel som sender ting internt i en thread -> virker unødvendig? (Mistenker at vi kan droppe hele motorstop_rx recv-en og heller oppdatere staten inne i motor_timer og det andre stedet tx-en kalles)
-- Vurdere å bake inn følgende kodelinje i en funksjon/variabel: elevator_orders.orders[state.floor as usize].iter().all(|&x| x == false)
 - Er det nødvendig å initialisere emergency stop lyset? Vi setter det vel rett over til av også blir det oppdatert ved alle endringer?
 - Skulle vi laget en init funksjon? (Kunne også vurdert å legge til en initialiseringsstate der det ikke blir assignet noen ordre)
 - Kunne vurdert å skrive ut argumentene i recv casen istedenfor typ (new_order_tuple)
@@ -39,7 +34,7 @@ all_orders:
 distributor:
 - Vi kaller alle konstantene til tickers for period untatt for check heartbeat ticker, den heter duration -> vurdere å endre enten navnet på variabelen eller konstanten?
 - Vi kunne vurdert å legge til en funksjon som heter add _offline_order som både kunne lagt til i distributor_orders.elevator_orders og CAB + Hall som add_order funksjonen vår nå gjør. Det blir ikke noen ferre linjer kode, men lurer på om det er mulig å bli forvirret/tenke at det er misvisende at vi først legger til i elevator orders før vi kjører funksjonen add_order (og samme med offline_remove_order)
-- Endra message_type variabelen til order_type - kan være et annet navn er bedre, men synes det passer bedre enn message_type
+- Endra message_type variabelen til order_status - kan være et annet navn er bedre, men synes det passer bedre enn message_type
 - Jeg byttet rekkefølge på hvor vi setter state.offline til false og state=state -> tror sånn det var gjorde at vi risikerte å overskrive det at vi satte den til online igjen, men dette har ikke skjedd på noen tester -> test dette!
 
 transmitter:
