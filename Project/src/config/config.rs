@@ -10,8 +10,8 @@ pub const ELEV_ID: u8 = 0;
 pub const DOOR_TIMER_DURATION: time::Duration = time::Duration::from_secs(3);
 pub const MOTOR_TIMER_DURATION: time::Duration = time::Duration::from_secs(4);
 pub const MASTER_TIMER_DURATION: time::Duration = time::Duration::from_secs(2);
-pub const NETWORK_TIMER_DURATION: time::Duration = time::Duration::from_secs(1);
 
+pub const CHECK_HEARTBEAT_PERIOD: time::Duration = time::Duration::from_secs(1);
 pub const POLL_PERIOD: time::Duration = time::Duration::from_millis(25);
 
 pub const UNCONFIRMED_ORDERS_TRANSMIT_PERIOD: time::Duration = time::Duration::from_millis(20);

@@ -27,7 +27,7 @@ pub fn distributor(
     let mut last_received_heartbeat = [time::Instant::now(); config::ELEV_NUM_ELEVATORS as usize];
 
     let unconfirmed_orders_ticker = cbc::tick(config::UNCONFIRMED_ORDERS_TRANSMIT_PERIOD);
-    let check_heartbeat_ticker = cbc::tick(config::NETWORK_TIMER_DURATION);
+    let check_heartbeat_ticker = cbc::tick(config::CHECK_HEARTBEAT_PERIOD);
   
     let mut master_id = config::ELEV_NUM_ELEVATORS-1;
     let mut master_ticker = cbc::never();
@@ -155,7 +155,7 @@ pub fn distributor(
             recv(check_heartbeat_ticker) -> _ => {
                 let now = time::Instant::now();
                 
-                let local_elevator_lost_connection = (now.duration_since(last_received_heartbeat[elevator_id as usize]) > config::NETWORK_TIMER_DURATION) && !states[elevator_id as usize].offline;
+                let local_elevator_lost_connection = (now.duration_since(last_received_heartbeat[elevator_id as usize]) > config::CHECK_HEARTBEAT_PERIOD) && !states[elevator_id as usize].offline;
                 if local_elevator_lost_connection {
                     states[elevator_id as usize].offline = true;
                     master_ticker = cbc::never();
@@ -168,7 +168,7 @@ pub fn distributor(
 
                 else { 
                     for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
-                        let elevator_lost_connection = (now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION) && (!states[id].offline && !states[elevator_id as usize].offline);
+                        let elevator_lost_connection = (now.duration_since(*last_heartbeat) > config::CHECK_HEARTBEAT_PERIOD) && (!states[id].offline && !states[elevator_id as usize].offline);
                         if elevator_lost_connection {
                             println!("Elevator {} is offline.", id);
                             states[id].offline = true;

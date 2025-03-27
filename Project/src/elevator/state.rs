@@ -19,8 +19,7 @@ impl Behaviour {
         }
     }
     
-} 
-
+}
 
 #[repr(u8)]
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
