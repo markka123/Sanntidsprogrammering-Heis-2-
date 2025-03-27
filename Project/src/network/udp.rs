@@ -14,7 +14,6 @@ pub fn create_socket() -> io::Result<sync::Arc<net::UdpSocket>> {
     
     socket.set_reuse_address(true)?;
     socket.bind(&bind_address.parse::<net::SocketAddr>().unwrap().into())?;
-    
 
     let socket = sync::Arc::new(net::UdpSocket::from(socket));
     socket.set_broadcast(true)?;

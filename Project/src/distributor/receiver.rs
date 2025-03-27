@@ -6,6 +6,7 @@ use serde_json;
 use std::net;
 use std::sync;
 
+/// Receive broadcasted UDP messages and pass them to the distributor.
 pub fn receiver(
     udp_message_tx: cbc::Sender<udp_message::UdpMessage>,
     socket: sync::Arc<net::UdpSocket>,

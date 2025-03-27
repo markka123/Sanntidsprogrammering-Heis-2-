@@ -1,10 +1,10 @@
 use crate::elevator::orders;
 use crate::elevator::state;
 
-
 use serde_json;
 use std::process;
 
+/// Use the provided hall_assigner to assign orders based on elevator states.
 pub fn assign_orders(
     states: &state::States,
     cab_requests: &orders::CabOrders,

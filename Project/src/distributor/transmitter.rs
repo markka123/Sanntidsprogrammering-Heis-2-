@@ -8,6 +8,7 @@ use serde_json;
 use std::net;
 use std::sync;
 
+/// Broadcast elevator state and messages from the distributor.
 pub fn transmitter(
     new_state_rx: cbc::Receiver<state::State>,
     master_transmit_rx: cbc::Receiver<String>,

@@ -8,6 +8,8 @@ use crate::elevio::poll;
 use crossbeam_channel as cbc;
 use std::thread;
 
+/// Manage elevator operation based on assigned orders from the distributor.
+/// Pass order- and state updates to the distributor.
 pub fn elevator_fsm(
     elevator: elev::Elevator,
     local_orders_rx: cbc::Receiver<(orders::Orders, orders::HallOrders)>,
@@ -77,14 +79,14 @@ pub fn elevator_fsm(
                         if elevator_orders.cab_at_floor(state.floor) || elevator_orders.hall_at_floor_in_direction(state.floor, state.direction) {
                             state.behaviour = state::Behaviour::DoorOpen;
                             new_state_tx.send(state.clone()).unwrap();
-                            elevator_orders.order_done(state.floor, state.direction, &completed_order_tx);
+                            elevator_orders.send_executed_orders(state.floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap();
                         }
                         else if elevator_orders.hall_at_floor_in_direction(state.floor, state.direction.opposite()) {
                             state.behaviour = state::Behaviour::DoorOpen;
                             state.direction = state.direction.opposite();
                             new_state_tx.send(state.clone()).unwrap();
-                            elevator_orders.order_done(state.floor, state.direction, &completed_order_tx);
+                            elevator_orders.send_executed_orders(state.floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap();
                         }
                         else if elevator_orders.order_in_direction(state.floor, state.direction) {
@@ -104,7 +106,7 @@ pub fn elevator_fsm(
                     state::Behaviour::DoorOpen => {
                         if (elevator_orders.cab_at_floor(state.floor) || elevator_orders.hall_at_floor_in_direction(state.floor, state.direction))
                         && state.is_availible() {
-                            elevator_orders.order_done(state.floor, state.direction, &completed_order_tx);
+                            elevator_orders.send_executed_orders(state.floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap();
                         }
                     },
@@ -135,7 +137,7 @@ pub fn elevator_fsm(
                             new_state_tx.send(state.clone()).unwrap();
 
                             elevator.motor_direction(elev::DIRN_STOP);
-                            elevator_orders.order_done(floor, state.direction, &completed_order_tx);
+                            elevator_orders.send_executed_orders(floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap();
                         }
                         else if elevator_orders.cab_at_floor(state.floor) && elevator_orders.order_in_direction(state.floor, state.direction) {
@@ -143,7 +145,7 @@ pub fn elevator_fsm(
                             new_state_tx.send(state.clone()).unwrap();
 
                             elevator.motor_direction(elev::DIRN_STOP);
-                            elevator_orders.order_done(floor, state.direction, &completed_order_tx);
+                            elevator_orders.send_executed_orders(floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap();
                         }
                         else if elevator_orders.cab_at_floor(state.floor) && !elevator_orders.hall_at_floor_in_direction(state.floor, state.direction.opposite()) {
@@ -151,7 +153,7 @@ pub fn elevator_fsm(
                             new_state_tx.send(state.clone()).unwrap();
 
                             elevator.motor_direction(elev::DIRN_STOP);
-                            elevator_orders.order_done(floor, state.direction, &completed_order_tx);
+                            elevator_orders.send_executed_orders(floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap();
                         }
                         else if elevator_orders.order_in_direction(state.floor, state.direction) {
@@ -164,7 +166,7 @@ pub fn elevator_fsm(
                             new_state_tx.send(state.clone()).unwrap();
 
                             elevator.motor_direction(elev::DIRN_STOP);
-                            elevator_orders.order_done(floor, state.direction, &completed_order_tx);
+                            elevator_orders.send_executed_orders(floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap(); 
                         }
                         else if elevator_orders.order_in_direction(state.floor, state.direction.opposite()) {
@@ -182,7 +184,7 @@ pub fn elevator_fsm(
                         }
                     },
                     _ => {
-                        println!("Floor indicator received while in unexpected state");
+                        println!("Floor indicator received while in unexpected state.");
                     }
                 }
             },
@@ -200,7 +202,7 @@ pub fn elevator_fsm(
                             state.direction = state.direction.opposite();
                             new_state_tx.send(state.clone()).unwrap();
 
-                            elevator_orders.order_done(state.floor, state.direction, &completed_order_tx);
+                            elevator_orders.send_executed_orders(state.floor, state.direction, &completed_order_tx);
                             open_doors_tx.send(true).unwrap();
                         }
                         else if elevator_orders.order_in_direction(state.floor, state.direction.opposite()) {
@@ -257,7 +259,7 @@ pub fn elevator_fsm(
                     }
                     elevator.stop_button_light(state.emergency_stop);
                     new_state_tx.send(state.clone()).unwrap();
-                    println!("{}", if state.emergency_stop {"Emergency stop activated"} else {"Emergency stop deactivated"});
+                    println!("{}", if state.emergency_stop {"Emergency stop activated."} else {"Emergency stop deactivated."});
                 }
             }
             recv(motor_timer) -> _ => {

@@ -52,13 +52,13 @@ impl AllOrders {
         }
     }
 
-    pub fn add_offline_order(&mut self, order: poll::CallButton, elevator_id: u8 ) {
+    pub fn offline_add_order(&mut self, order: poll::CallButton, elevator_id: u8 ) {
         self.add_order(order.clone(), elevator_id);
         self.elevator_orders[order.floor as usize][order.call as usize] = true;
         self.unconfirmed_orders.retain(|(order_status, unconfirmed_order)| !(*order_status == COMPLETED_ORDER && order == *unconfirmed_order));
     }
 
-    pub fn remove_offline_order(&mut self, order: poll::CallButton, elevator_id: u8) {
+    pub fn offline_remove_order(&mut self, order: poll::CallButton, elevator_id: u8) {
         self.remove_order(order.clone(), elevator_id);
         self.elevator_orders[order.floor as usize][order.call as usize] = false;
         self.unconfirmed_orders.retain(|(order_status, unconfirmed_order)| !(*order_status == NEW_ORDER && order == *unconfirmed_order));
@@ -117,6 +117,7 @@ impl AllOrders {
         (hall_orders, cab_orders)
     }
 
+    /// Update variables based on new assigned orders from master. Return true if local orders have changed.
     pub fn update_orders(&mut self, all_assigned_orders: serde_json::Value, elevator_id: u8) -> bool {
         let (previous_hall_orders, _) = self.get_assigned_hall_and_cab_orders();
         let previous_elevator_orders = self.elevator_orders;
@@ -137,8 +138,6 @@ impl AllOrders {
     } 
 
     pub fn init_offline_operation(&mut self, elevator_id: u8) {
-
-
         for (floor, order) in self.cab_orders[elevator_id as usize].iter().enumerate() {
             self.elevator_orders[floor as usize][elev::CAB as usize] = *order;
         }

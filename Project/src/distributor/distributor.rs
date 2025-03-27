@@ -14,6 +14,9 @@ use std::sync;
 use std::thread;
 use std::time;
 
+/// Manage synchronization of elevator states and orders. 
+/// Distribute orders across elevators when acting as master.
+/// Send local orders to elevator during online and offline operation.
 pub fn distributor(
     elevator_id: u8,
     local_orders_tx: cbc::Sender<(orders::Orders, orders::HallOrders)>,
@@ -79,7 +82,7 @@ pub fn distributor(
                 distributor_orders.unconfirmed_orders.push((order_status, new_order.clone()));
 
                 if states[elevator_id as usize].offline {
-                    distributor_orders.add_offline_order(new_order.clone(), elevator_id);
+                    distributor_orders.offline_add_order(new_order.clone(), elevator_id);
 
                     local_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                 }
@@ -92,7 +95,7 @@ pub fn distributor(
                 distributor_orders.unconfirmed_orders.push((order_status, completed_order.clone()));
 
                 if states[elevator_id as usize].offline {
-                    distributor_orders.remove_offline_order(completed_order.clone(), elevator_id);
+                    distributor_orders.offline_remove_order(completed_order.clone(), elevator_id);
 
                     local_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                 }
@@ -127,7 +130,7 @@ pub fn distributor(
                     Ok(udp_message::UdpMessage::State((id, state))) => {
                         if states[id as usize].offline {
                             states[id as usize].offline = false;
-                            println!("Elevator {} is online again", id);
+                            println!("Elevator {} is online again.", id);
                         }
 
                         states[id as usize] = state;

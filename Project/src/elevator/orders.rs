@@ -59,7 +59,7 @@ impl ElevatorOrders {
         }
     }
 
-    pub fn order_done(
+    pub fn send_executed_orders(
         &mut self,
         current_floor: u8,
         direction: state::Direction,
