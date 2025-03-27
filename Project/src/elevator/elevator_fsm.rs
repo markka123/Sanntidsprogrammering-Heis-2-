@@ -235,35 +235,30 @@ pub fn elevator_fsm(
             },
             recv(stop_button_rx) -> stop_button_message => {
                 let stop_button_pressed = stop_button_message.unwrap();
-                if stop_button_pressed && !state.emergency_stop {
-                    state.emergency_stop = true;
-                    new_state_tx.send(state.clone()).unwrap();
+                
+                if stop_button_pressed {
+                    state.emergency_stop = !state.emergency_stop;
+                    if state.emergency_stop {
+                        elevator.motor_direction(elev::DIRN_STOP);
+                        motor_timer = cbc::never();
 
-                    elevator.motor_direction(elev::DIRN_STOP);
-                    motor_timer = cbc::never();
-
-                    if state.behaviour == state::Behaviour::Idle || state.behaviour == state::Behaviour::DoorOpen  {
-                        obstruct_doors_tx.send(true).unwrap();
-                        open_doors_tx.send(true).unwrap();
+                        if state.behaviour == state::Behaviour::Idle || state.behaviour == state::Behaviour::DoorOpen  {
+                            state.behaviour = state::Behaviour::DoorOpen;
+                            obstruct_doors_tx.send(true).unwrap();
+                            open_doors_tx.send(true).unwrap();
+                        }
                     }
-
-                    println!("Emergency stop activated");
-                }
-                else if stop_button_pressed && state.emergency_stop {
-                    state.emergency_stop = false;
-                    new_state_tx.send(state.clone()).unwrap();
-
-                    obstruct_doors_tx.send(false).unwrap();
-                    
-                    if state.behaviour == state::Behaviour::Moving {
+                    else if state.behaviour == state::Behaviour::Moving {
                         elevator.motor_direction(state.direction.to_motor_direction());
                         motor_timer = cbc::after(config::MOTOR_TIMER_DURATION);
                     }
-
-                    println!("Emergency stop deactivated");
+                    else if state.behaviour == state::Behaviour::DoorOpen {
+                        obstruct_doors_tx.send(false).unwrap();
+                    }
+                    elevator.stop_button_light(state.emergency_stop);
+                    new_state_tx.send(state.clone()).unwrap();
+                    println!("{}", if state.emergency_stop {"Emergency stop activated"} else {"Emergency stop deactivated"});
                 }
-
-                elevator.stop_button_light(state.emergency_stop);
             }
             recv(motor_timer) -> _ => {
                 if !state.motorstop {

@@ -139,8 +139,6 @@ pub fn distributor(
                         last_received_heartbeat[id as usize] = time::Instant::now();
                     },
                     Ok(udp_message::UdpMessage::AllAssignedOrders((incoming_master_id, all_assigned_orders))) => {
-                        let prev_hashmap = distributor_orders.assigned_orders_map.clone();
-
                         let change_in_local_orders = distributor_orders.update_orders(all_assigned_orders, elevator_id);
                         if change_in_local_orders {
                             local_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
