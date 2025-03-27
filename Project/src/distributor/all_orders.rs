@@ -137,7 +137,7 @@ impl AllOrders {
             self.update_elevator_orders_when_unavalible(elevator_id);
         } 
         
-        self.hall_orders != previous_hall_orders || self.elevator_orders != previous_elevator_orders
+        (self.hall_orders != previous_hall_orders) || (self.elevator_orders != previous_elevator_orders)
     } 
 
     pub fn init_offline_operation(&mut self, elevator_id: u8) {
