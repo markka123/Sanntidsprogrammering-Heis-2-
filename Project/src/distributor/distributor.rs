@@ -28,12 +28,10 @@ pub fn distributor(
 
     let unconfirmed_orders_ticker = cbc::tick(config::UNCONFIRMED_ORDERS_TRANSMIT_PERIOD);
     let check_heartbeat_ticker = cbc::tick(config::NETWORK_TIMER_DURATION);
-
-    
+  
     let mut master_id = config::ELEV_NUM_ELEVATORS-1;
     let mut master_ticker = cbc::never();
     let mut master_timer = cbc::after(config::MASTER_TIMER_DURATION);
-
 
     let socket = udp::create_socket().expect("Failed to create UDP socket");
     let socket_receiver = sync::Arc::clone(&socket);
@@ -45,8 +43,7 @@ pub fn distributor(
             receiver::receiver(udp_message_tx, socket_receiver)
         });
     }
-
-    
+ 
     let (master_transmit_tx, master_transmit_rx) = cbc::unbounded::<String>();
     let (order_message_tx, order_message_rx) = cbc::unbounded::<(u8, poll::CallButton)>();
     {
@@ -54,7 +51,6 @@ pub fn distributor(
             transmitter::transmitter(new_state_rx, master_transmit_rx, order_message_rx, socket_transmitter, elevator_id)
         });
     }
-
 
     loop {
         cbc::select! {
@@ -87,7 +83,6 @@ pub fn distributor(
 
                     local_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                 }
-
                 order_message_tx.send((order_status, new_order)).unwrap();
             },
             recv(completed_order_rx) -> completed_order_message => {
@@ -151,8 +146,6 @@ pub fn distributor(
                         if master_id != elevator_id {
                             master_ticker = cbc::never();
                         }
-
-
                     }
                     Err(e) => {
                         println!("Received unexpected udp message in distributor::distributor and it caused this error: {:#?}.", e);

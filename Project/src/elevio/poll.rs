@@ -4,7 +4,7 @@ use std::time;
 
 use super::elev;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CallButton {
     pub floor: u8,
     pub call: u8,

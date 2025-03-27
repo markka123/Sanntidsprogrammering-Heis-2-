@@ -55,12 +55,14 @@ impl AllOrders {
     pub fn add_offline_order(&mut self, order: poll::CallButton, elevator_id: u8 ) {
         self.add_order(order.clone(), elevator_id);
         self.elevator_orders[order.floor as usize][order.call as usize] = true;
+        self.unconfirmed_orders.retain(|(order_status, unconfirmed_order)| !(*order_status == COMPLETED_ORDER && order == *unconfirmed_order));
     }
 
     pub fn remove_offline_order(&mut self, order: poll::CallButton, elevator_id: u8) {
         self.remove_order(order.clone(), elevator_id);
         self.elevator_orders[order.floor as usize][order.call as usize] = false;
-        self.unconfirmed_orders.retain(|(order_status, unconfirmed_order)| *order_status != COMPLETED_ORDER || order.floor != unconfirmed_order.floor || order.call != unconfirmed_order.call);
+        self.unconfirmed_orders.retain(|(order_status, unconfirmed_order)| !(*order_status == NEW_ORDER && order == *unconfirmed_order));
+        self.unconfirmed_orders.retain(|(order_status, _)| !(*order_status == COMPLETED_ORDER && order.call != elev::CAB));
     }
 
     /// Remove orders from unconfirmed_orders if they appear in assigned_orders_map.
