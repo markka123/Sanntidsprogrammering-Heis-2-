@@ -115,15 +115,6 @@ impl AllOrders {
         (hall_orders, cab_orders)
     }
 
-    pub fn update_elevator_orders_when_unavalible(&mut self, elevator_id: u8) {
-        self.elevator_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
-        let mut floor = 0;
-        for order in self.cab_orders[elevator_id as usize].iter() {
-            self.elevator_orders[floor as usize][elev::CAB as usize] = *order;
-            floor += 1;
-        }
-    }
-
     pub fn update_orders(&mut self, all_assigned_orders_string: serde_json::Value, elevator_id: u8) -> bool {
         let (previous_hall_orders, _) = self.get_assigned_hall_and_cab_orders();
         let previous_elevator_orders = self.elevator_orders;
@@ -134,7 +125,10 @@ impl AllOrders {
         if let Some(new_elevator_orders) = self.assigned_orders_map.get(&elevator_id) {
             self.elevator_orders = *new_elevator_orders;
         } else {
-            self.update_elevator_orders_when_unavalible(elevator_id);
+            self.elevator_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
+            for (floor, order) in self.cab_orders[elevator_id as usize].iter().enumerate() {
+                self.elevator_orders[floor as usize][elev::CAB as usize] = *order;
+            }
         } 
         
         (self.hall_orders != previous_hall_orders) || (self.elevator_orders != previous_elevator_orders)
@@ -142,10 +136,9 @@ impl AllOrders {
 
     pub fn init_offline_operation(&mut self, elevator_id: u8) {
 
-        let mut floor = 0;
-        for order in self.cab_orders[elevator_id as usize].iter() {
+
+        for (floor, order) in self.cab_orders[elevator_id as usize].iter().enumerate() {
             self.elevator_orders[floor as usize][elev::CAB as usize] = *order;
-            floor += 1;
         }
         for floor in 0..config::ELEV_NUM_FLOORS {
             for call in 0..(config::ELEV_NUM_BUTTONS-1) {

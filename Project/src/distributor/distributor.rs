@@ -139,12 +139,11 @@ pub fn distributor(
                         last_received_heartbeat[id as usize] = time::Instant::now();
                     },
                     Ok(udp_message::UdpMessage::AllAssignedOrders((incoming_master_id, all_assigned_orders_string))) => {
-                        
-                        
                         let change_in_orders = distributor_orders.update_orders(all_assigned_orders_string, elevator_id);
                         if change_in_orders {
                             elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                         }
+                        
                         distributor_orders.confirm_orders(elevator_id);
 
                         master_id = incoming_master_id;
