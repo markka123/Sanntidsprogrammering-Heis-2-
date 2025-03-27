@@ -111,6 +111,17 @@ impl AllOrders {
         all_hall_orders
     }
 
+    pub fn get_assigned_cab_orders(&mut self) -> orders::CabOrders {
+        let mut all_cab_orders = [[false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
+
+        for (elevator_id, orders) in &self.assigned_orders_map {
+            for (floor, call) in orders.iter().enumerate() {
+                all_cab_orders[*elevator_id as usize][floor] = call[2];
+            }
+        }
+        all_cab_orders
+    }
+
     pub fn init_offline_operation(&mut self, elevator_id: u8) {
 
         let mut floor = 0;
