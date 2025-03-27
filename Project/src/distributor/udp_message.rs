@@ -1,9 +1,8 @@
-use crate::elevator_controller::state;
+use crate::elevator::state;
 use crate::network::udp;
 
 use serde;
 use serde_json;
-
 use std::net;
 use std::sync;
 
@@ -16,6 +15,6 @@ pub enum UdpMessage {
 }
 
 pub fn broadcast_udp_message(socket: &sync::Arc<net::UdpSocket>, message: &UdpMessage) {
-    let message_json = serde_json::to_string(message).unwrap();
-    let _ = udp::broadcast_udp_message(&socket, &message_json);
+    let message_string = serde_json::to_string(message).unwrap();
+    let _ = udp::broadcast_message(&socket, &message_string);
 }
