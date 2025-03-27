@@ -16,14 +16,14 @@ use std::time;
 
 pub fn distributor(
     elevator_id: u8,
-    elevator_orders_tx: cbc::Sender<(orders::Orders, orders::HallOrders)>,
+    local_orders_tx: cbc::Sender<(orders::Orders, orders::HallOrders)>,
     completed_order_rx: cbc::Receiver<poll::CallButton>,
     new_order_rx: cbc::Receiver<poll::CallButton>,
     new_state_rx: cbc::Receiver<state::State>,
     
 ) {
     let mut distributor_orders = all_orders::AllOrders::init();
-    let mut states: state::States = std::array::from_fn(|_| state::State::init());
+    let mut states = std::array::from_fn(|_| state::State::init());
     let mut last_received_heartbeat = [time::Instant::now(); config::ELEV_NUM_ELEVATORS as usize];
 
     let unconfirmed_orders_ticker = cbc::tick(config::UNCONFIRMED_ORDERS_TRANSMIT_PERIOD);
@@ -85,7 +85,7 @@ pub fn distributor(
                 if states[elevator_id as usize].offline {
                     distributor_orders.add_offline_order(new_order.clone(), elevator_id);
 
-                    elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                    local_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                 }
 
                 order_message_tx.send((order_status, new_order)).unwrap();
@@ -99,7 +99,7 @@ pub fn distributor(
                 if states[elevator_id as usize].offline {
                     distributor_orders.remove_offline_order(completed_order.clone(), elevator_id);
 
-                    elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                    local_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                 }
 
                 order_message_tx.send((order_status, completed_order)).unwrap();
@@ -138,10 +138,10 @@ pub fn distributor(
                         states[id as usize] = state;
                         last_received_heartbeat[id as usize] = time::Instant::now();
                     },
-                    Ok(udp_message::UdpMessage::AllAssignedOrders((incoming_master_id, all_assigned_orders_string))) => {
-                        let change_in_orders = distributor_orders.update_orders(all_assigned_orders_string, elevator_id);
-                        if change_in_orders {
-                            elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                    Ok(udp_message::UdpMessage::AllAssignedOrders((incoming_master_id, all_assigned_orders))) => {
+                        let change_in_local_orders = distributor_orders.update_orders(all_assigned_orders, elevator_id);
+                        if change_in_local_orders {
+                            local_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                         }
                         
                         distributor_orders.confirm_orders(elevator_id);
@@ -166,7 +166,7 @@ pub fn distributor(
                     master_ticker = cbc::never();
 
                     distributor_orders.init_offline_operation(elevator_id);
-                    elevator_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
+                    local_orders_tx.send((distributor_orders.elevator_orders, distributor_orders.hall_orders)).unwrap();
                     
                     println!("Lost network connection - starting offline operation.");
                 }

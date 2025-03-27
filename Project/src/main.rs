@@ -19,7 +19,7 @@ fn main() -> std::io::Result<()> {
 
     let elevator = elev::Elevator::init(&address, config::ELEV_NUM_FLOORS)?;
 
-    let (elevator_orders_tx, elevator_orders_rx) = cbc::unbounded::<(orders::Orders, orders::HallOrders)>();
+    let (local_orders_tx, local_orders_rx) = cbc::unbounded::<(orders::Orders, orders::HallOrders)>();
     let (completed_order_tx, completed_order_rx) = cbc::unbounded::<poll::CallButton>();
     let (new_order_tx, new_order_rx) = cbc::unbounded::<poll::CallButton>();
     let (new_state_tx, new_state_rx) = cbc::unbounded::<state::State>();
@@ -27,8 +27,8 @@ fn main() -> std::io::Result<()> {
         let elevator = elevator.clone();
         thread::spawn(move || {
             elevator_fsm::elevator_fsm(
-                &elevator,
-                elevator_orders_rx,
+                elevator,
+                local_orders_rx,
                 completed_order_tx,
                 new_order_tx,
                 new_state_tx,
@@ -40,7 +40,7 @@ fn main() -> std::io::Result<()> {
         thread::spawn(move || {
             distributor::distributor(
                 elevator_id,
-                elevator_orders_tx,
+                local_orders_tx,
                 completed_order_rx,
                 new_order_rx,
                 new_state_rx,

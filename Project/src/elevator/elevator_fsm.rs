@@ -5,12 +5,12 @@ use crate::elevator::state;
 use crate::elevio::elev;
 use crate::elevio::poll;
 
-use std::thread;
 use crossbeam_channel as cbc;
+use std::thread;
 
 pub fn elevator_fsm(
-    elevator: &elev::Elevator,
-    elevator_orders_rx: cbc::Receiver<(orders::Orders, orders::HallOrders)>,
+    elevator: elev::Elevator,
+    local_orders_rx: cbc::Receiver<(orders::Orders, orders::HallOrders)>,
     completed_order_tx: cbc::Sender<poll::CallButton>,
     new_order_tx: cbc::Sender<poll::CallButton>,
     new_state_tx: cbc::Sender<state::State>,
@@ -67,7 +67,7 @@ pub fn elevator_fsm(
 
     loop {   
         cbc::select! {
-            recv(elevator_orders_rx) -> elevator_orders_message => {
+            recv(local_orders_rx) -> elevator_orders_message => {
                 (elevator_orders.orders, elevator_orders.hall_orders) = elevator_orders_message.unwrap();
             
                 elevator_orders.set_lights(elevator.clone());

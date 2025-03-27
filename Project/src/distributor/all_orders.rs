@@ -102,7 +102,7 @@ impl AllOrders {
 
 
     pub fn get_assigned_hall_and_cab_orders(&mut self) -> (orders::HallOrders, orders::CabOrders) {
-        let mut cab_orders: orders::CabOrders = self.cab_orders;
+        let mut cab_orders = self.cab_orders;
         let mut hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
 
         for (elevator_id, orders) in &self.assigned_orders_map {
@@ -115,11 +115,11 @@ impl AllOrders {
         (hall_orders, cab_orders)
     }
 
-    pub fn update_orders(&mut self, all_assigned_orders_string: serde_json::Value, elevator_id: u8) -> bool {
+    pub fn update_orders(&mut self, all_assigned_orders: serde_json::Value, elevator_id: u8) -> bool {
         let (previous_hall_orders, _) = self.get_assigned_hall_and_cab_orders();
         let previous_elevator_orders = self.elevator_orders;
         
-        self.assigned_orders_map = serde_json::from_value(all_assigned_orders_string).unwrap();
+        self.assigned_orders_map = serde_json::from_value(all_assigned_orders).unwrap();
         (self.hall_orders, self.cab_orders) = self.get_assigned_hall_and_cab_orders();
 
         if let Some(new_elevator_orders) = self.assigned_orders_map.get(&elevator_id) {

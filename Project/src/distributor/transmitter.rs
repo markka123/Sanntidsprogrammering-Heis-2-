@@ -15,7 +15,7 @@ pub fn transmitter(
     socket: sync::Arc<net::UdpSocket>,
     elevator_id: u8,
 ) {
-    let mut elevator_state: state::State = state::State::init();
+    let mut elevator_state = state::State::init();
     let state_ticker = cbc::tick(config::STATE_TRANSMIT_PERIOD);
 
     loop {
@@ -34,8 +34,8 @@ pub fn transmitter(
                 udp_message::broadcast_udp_message(&socket, &message);
             },
             recv(master_transmit_rx) -> assigned_orders_message => {
-                let all_assigned_orders_string: serde_json::Value = serde_json::from_str(&assigned_orders_message.unwrap()).expect("Failed");
-                let message = udp_message::UdpMessage::AllAssignedOrders((elevator_id, all_assigned_orders_string));
+                let all_assigned_orders_value = serde_json::from_str(&assigned_orders_message.unwrap()).expect("Failed");
+                let message = udp_message::UdpMessage::AllAssignedOrders((elevator_id, all_assigned_orders_value));
                 udp_message::broadcast_udp_message(&socket, &message);
             }
         }
