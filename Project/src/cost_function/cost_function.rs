@@ -33,7 +33,6 @@ pub fn assign_orders(
     });
     let json_input_string = json_input.to_string();
 
-    
     let executable_path = "src/cost_function/executables/hall_request_assigner";
 
     let output = process::Command::new(executable_path)
