@@ -102,14 +102,14 @@ impl AllOrders {
 
 
     pub fn get_assigned_hall_and_cab_orders(&mut self) -> (orders::HallOrders, orders::CabOrders) {
-        let mut cab_orders = [[false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
+        let mut cab_orders: orders::CabOrders = self.cab_orders;
         let mut hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
 
         for (elevator_id, orders) in &self.assigned_orders_map {
             for (floor, call) in orders.iter().enumerate() {
-                hall_orders[floor][0] |= call[0];
-                hall_orders[floor][1] |= call[1];
-                cab_orders[*elevator_id as usize][floor] = call[2];
+                hall_orders[floor][elev::HALL_UP as usize] |= call[elev::HALL_UP as usize];
+                hall_orders[floor][elev::HALL_DOWN as usize] |= call[elev::HALL_DOWN as usize];
+                cab_orders[*elevator_id as usize][floor] = call[elev::CAB as usize];
             }
         }
         (hall_orders, cab_orders)
