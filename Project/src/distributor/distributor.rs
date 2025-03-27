@@ -154,9 +154,6 @@ pub fn distributor(
                             master_ticker = cbc::never();
                         }
 
-                        if distributor_orders.assigned_orders_map != prev_hashmap {
-                            println!{"{:#?}", distributor_orders.assigned_orders_map};
-                        }
 
                     }
                     Err(e) => {
