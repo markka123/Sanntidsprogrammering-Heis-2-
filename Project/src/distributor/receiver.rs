@@ -21,7 +21,6 @@ pub fn receiver(
                 }
                 Ok(udp_message::UdpMessage::AllAssignedOrders((incoming_master_id, all_assigned_orders))) => {
                     udp_message_tx.send(udp_message::UdpMessage::AllAssignedOrders((incoming_master_id, all_assigned_orders))).unwrap();
-
                 }
                 Err(e) => {
                     println!("Failed to receive message in distributor::receiver and received this error: {:#?}", e);

@@ -18,7 +18,7 @@ socket2 = "0.5.8"
 
 
 [lib]
-name = "driver_rust"
+name = "project"
 path = "src/lib.rs"
 
 

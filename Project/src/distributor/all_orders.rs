@@ -4,6 +4,7 @@ use crate::elevio::poll;
 use crate::elevator::orders;
 
 use std::collections;
+use serde_json;
 
 
 pub const NEW_ORDER: u8 = 0;
@@ -99,28 +100,45 @@ impl AllOrders {
         });
     }  
 
-    pub fn get_assigned_hall_orders(&mut self) -> orders::HallOrders {
-        let mut all_hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
 
-        for orders in self.assigned_orders_map.values() {
-            for (floor, call) in orders.iter().enumerate() {
-                all_hall_orders[floor][0] |= call[0];
-                all_hall_orders[floor][1] |= call[1];
-            }
-        }
-        all_hall_orders
-    }
-
-    pub fn get_assigned_cab_orders(&mut self) -> orders::CabOrders {
-        let mut all_cab_orders = [[false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
+    pub fn get_assigned_hall_and_cab_orders(&mut self) -> (orders::HallOrders, orders::CabOrders) {
+        let mut cab_orders = [[false; config::ELEV_NUM_FLOORS as usize]; config::ELEV_NUM_ELEVATORS as usize];
+        let mut hall_orders = [[false; 2]; config::ELEV_NUM_FLOORS as usize];
 
         for (elevator_id, orders) in &self.assigned_orders_map {
             for (floor, call) in orders.iter().enumerate() {
-                all_cab_orders[*elevator_id as usize][floor] = call[2];
+                hall_orders[floor][0] |= call[0];
+                hall_orders[floor][1] |= call[1];
+                cab_orders[*elevator_id as usize][floor] = call[2];
             }
         }
-        all_cab_orders
+        (hall_orders, cab_orders)
     }
+
+    pub fn update_elevator_orders_when_unavalible(&mut self, elevator_id: u8) {
+        self.elevator_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
+        let mut floor = 0;
+        for order in self.cab_orders[elevator_id as usize].iter() {
+            self.elevator_orders[floor as usize][elev::CAB as usize] = *order;
+            floor += 1;
+        }
+    }
+
+    pub fn update_orders(&mut self, all_assigned_orders_string: serde_json::Value, elevator_id: u8) -> bool {
+        let (previous_hall_orders, _) = self.get_assigned_hall_and_cab_orders();
+        let previous_elevator_orders = self.elevator_orders;
+        
+        self.assigned_orders_map = serde_json::from_value(all_assigned_orders_string).unwrap();
+        (self.hall_orders, self.cab_orders) = self.get_assigned_hall_and_cab_orders();
+
+        if let Some(new_elevator_orders) = self.assigned_orders_map.get(&elevator_id) {
+            self.elevator_orders = *new_elevator_orders;
+        } else {
+            self.update_elevator_orders_when_unavalible(elevator_id);
+        } 
+        
+        self.hall_orders != previous_hall_orders || self.elevator_orders != previous_elevator_orders
+    } 
 
     pub fn init_offline_operation(&mut self, elevator_id: u8) {
 
@@ -138,15 +156,6 @@ impl AllOrders {
             if *order_status == NEW_ORDER {
                 self.elevator_orders[order.floor as usize][order.call as usize] = true;
             }
-        }
-    }
-
-    pub fn update_elevator_orders_when_unavalible(&mut self, elevator_id: u8) {
-        self.elevator_orders = [[false; 3]; config::ELEV_NUM_FLOORS as usize];
-        let mut floor = 0;
-        for order in self.cab_orders[elevator_id as usize].iter() {
-            self.elevator_orders[floor as usize][elev::CAB as usize] = *order;
-            floor += 1;
         }
     }
 }

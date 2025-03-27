@@ -1,11 +1,11 @@
-use driver_rust::config::config;
-use driver_rust::config::fetch_arguments;
-use driver_rust::elevator::orders;
-use driver_rust::elevio::elev;
-use driver_rust::elevio::poll;
-use driver_rust::elevator::elevator_fsm;
-use driver_rust::elevator::state;
-use driver_rust::distributor::distributor;
+use project::config::config;
+use project::config::fetch_arguments;
+use project::elevator::orders;
+use project::elevio::elev;
+use project::elevio::poll;
+use project::elevator::elevator_fsm;
+use project::elevator::state;
+use project::distributor::distributor;
 
 
 use std::thread;
