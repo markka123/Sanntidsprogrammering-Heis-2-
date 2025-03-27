@@ -18,47 +18,50 @@ Semaphore:
 */
 class Resource(T) {
     private {
-        T value;
-        Semaphore mtx;
-        Semaphore[2] sems;
-        int[2] numWaiting;
-        bool busy;
+        T               value;
+        Semaphore       mtx;
+        Semaphore[2]    sems;
+        int[2]          numWaiting;
+        bool            busy;
     }
-
-    this() {
+    
+    this(){
         mtx = new Semaphore(1);
-        foreach (i; 0 .. sems.length) {
-            sems[i] = new Semaphore(0);
+        foreach(ref sem; sems){
+            sem = new Semaphore(0);
         }
     }
-
-    T allocate(int priority) {
+    
+    
+    T allocate(int priority){
         mtx.wait();
-        if (busy) {
+        if(busy){
             numWaiting[priority]++;
             mtx.notify();
             sems[priority].wait();
-            numWaiting[priority]--;
+            numWaiting[priority] --;
         }
         busy = true;
         mtx.notify();
         return value;
     }
 
-    void deallocate(T v) {
+    void deallocate(T v){
         mtx.wait();
         value = v;
         busy = false;
-
-        if (numWaiting[1] > 0) {
+        if(numWaiting[1] > 0){
             sems[1].notify();
-        } else if (numWaiting[0] > 0) {
+        } else if(numWaiting[0] > 0){
             sems[0].notify();
         } else {
             mtx.notify();
         }
     }
 }
+
+
+
 
 
 void main(){

@@ -1,7 +1,6 @@
 
 import std.algorithm, std.concurrency, std.format, std.range, std.stdio, std.traits;
 import core.thread, core.sync.mutex, core.sync.condition;
-import std.typecons; // Import Tuple
 
 immutable Duration tick = 33.msecs;
 
@@ -29,38 +28,40 @@ Condition:
 */
 class Resource(T) {
     private {
-        T value;
-        Mutex mtx;
-        Condition cond;
-        PriorityQueue!(Tuple!(int, int)) queue; // (priority, id) tuple
+        T                   value;
+        Mutex               mtx;
+        Condition           cond;
+        PriorityQueue!int   queue;
     }
-
-    this() {
-        mtx = new Mutex();
-        cond = new Condition(mtx);
-        queue = PriorityQueue!(Tuple!(int, int))((a, b) => a[0] > b[0]); // Max heap by priority
+    
+    this(){
+        mtx     = new Mutex();
+        cond    = new Condition(mtx);
     }
-
-    T allocate(int id, int priority) {
-        synchronized(mtx) {
-            queue.insert(tuple(priority, id));
-            while (queue.front[1] != id) {
-                cond.wait();
-            }
-            return value;
+    
+    T allocate(int id, int priority){
+        mtx.lock();
+        queue.insert(id, priority);
+        while(queue.front() != id) {
+            cond.wait();
         }
+        mtx.unlock();
+        return value;
     }
-
-    void deallocate(T v) {
-        synchronized(mtx) {
-            value = v;
-            queue.removeFront();
-            if (!queue.empty) {
-                cond.notifyAll();
-            }
+    
+    void deallocate(T v){
+        mtx.lock();
+        value = v;
+        queue.popFront();
+        if(!queue.empty()) {
+            cond.notifyAll();
         }
+        mtx.unlock();
     }
 }
+
+
+
 
 // --- PRIORITY QUEUE --- //
 /*
