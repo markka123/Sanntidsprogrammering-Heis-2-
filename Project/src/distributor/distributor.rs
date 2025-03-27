@@ -132,7 +132,7 @@ pub fn distributor(
                     Ok(udp_message::UdpMessage::State((id, state))) => {
                         if states[id as usize].offline {
                             states[id as usize].offline = false;
-                            println!("Elevator {} has come online again", id);
+                            println!("Elevator {} is online again", id);
                         }
 
                         states[id as usize] = state;
@@ -177,7 +177,7 @@ pub fn distributor(
                     for (id, last_heartbeat) in last_received_heartbeat.iter().enumerate() {
                         let elevator_lost_connection = (now.duration_since(*last_heartbeat) > config::NETWORK_TIMER_DURATION) && (!states[id].offline && !states[elevator_id as usize].offline);
                         if elevator_lost_connection {
-                            println!("Elevator {} has lost network connection.", id);
+                            println!("Elevator {} is offline.", id);
                             states[id].offline = true;
                         }
                     }
